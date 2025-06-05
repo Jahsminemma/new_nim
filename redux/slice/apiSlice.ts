@@ -5,7 +5,7 @@ import {
   FetchArgs,
 } from "@reduxjs/toolkit/query/react";
 import { LoginStatus, logOut, setLoginStatus, } from "./authSlice";
-import { getToken, getStorageData, removeToken } from "@/types";
+import { getToken, getStorageData, removeToken } from "@/utils";
 
 
 const requiresAuthorization = (endpoint: string) => {
@@ -55,14 +55,14 @@ const baseQueryWithReauth = async (
       const user = await getStorageData("userData") 
 
   
-  if (requiresAuthorization(api.endpoint && accessToken)) {    
+  if (requiresAuthorization(api.endpoint && accessToken)) {  
+    console.log("required")  
     let result = await baseQuery(args, api, extraOptions);            
-    const currentRefreshToken = tokens?.refreshToken;     
+    const currentRefreshToken = tokens?.refreshToken;   
     if (
       requiresAuthorization(api.endpoint) &&
-      result.meta?.response?.status === 403 &&
-      currentRefreshToken
-    ) {
+      result.meta?.response?.status === 401    ) {
+      console.log("refresh")
       await removeToken();
       const refreshResult = await baseQuery({
           url: `auth/request-token`,
@@ -70,6 +70,7 @@ const baseQueryWithReauth = async (
           body: {email: user?.email, refreshToken: currentRefreshToken}
       }, api, extraOptions)      
       // @ts-ignore
+      console.log(refreshResult, 'refreshResult')
       if (refreshResult?.data) {
         // @ts-ignore
         await storeTokens(JSON.stringify(refreshResult?.data?.data));

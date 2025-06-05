@@ -1,14 +1,17 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, FlatList, RefreshControl } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, Image, TouchableOpacity, FlatList, RefreshControl, Modal, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useTheme } from '@/hooks/useTheme';
-import { Settings, Calendar, Gift, Users } from 'lucide-react-native';
+import { Settings, Calendar, Gift, Users, ArrowLeft, Camera, Image as ImageIcon, X, Wallet } from 'lucide-react-native';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'expo-router';
 import { mockFeaturedEvents, mockGiveaways } from '@/data/mockData';
 import EventCard from '@/components/events/EventCard';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import { useGetProfileQuery, useUploadProfilePictureMutation, useGetFollowingsQuery } from '@/redux/slice/userApiSlice';
+import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from "expo-image-manipulator";
 
 const tabs = [
   { id: 'events', label: 'My Events', icon: Calendar },
@@ -22,13 +25,74 @@ export default function ProfileScreen() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState('events');
   const [refreshing, setRefreshing] = useState(false);
+  const [showImageModal, setShowImageModal] = useState(false);
+  const [imageKey, setImageKey] = useState(Date.now());
+  const [isUploading, setIsUploading] = useState(false);
+  const [showWalletTooltip, setShowWalletTooltip] = useState(false);
   
+  const { data: profileData, isLoading, refetch, error } = useGetProfileQuery({});
+  const [uploadProfilePicture] = useUploadProfilePictureMutation();
+  const { data: followingsData, isLoading: isLoadingFollowings } = useGetFollowingsQuery();
+
+  const handleImageUpdate = async (type: 'camera' | 'library') => {
+    try {
+      setIsUploading(true);
+      let result;
+      if (type === 'camera') {
+        const { status } = await ImagePicker.requestCameraPermissionsAsync();
+        if (status !== 'granted') {
+          Alert.alert('Permission needed', 'Please grant camera permission to update profile picture');
+          return;
+        }
+        result = await ImagePicker.launchCameraAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Images.toLocaleLowerCase() as ImagePicker.MediaTypeOptions,
+          allowsEditing: true,
+          aspect: [1, 1],
+          quality: 0.8,
+        });
+      } else {
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== 'granted') {
+          Alert.alert('Permission needed', 'Please grant photo library permission to update profile picture');
+          return;
+        }
+        result = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Images.toLocaleLowerCase() as ImagePicker.MediaTypeOptions,
+          allowsEditing: true,
+          aspect: [1, 1],
+          quality: 0.8,
+        });
+      }
+
+      if (!result.canceled && result.assets[0].uri) {
+        const manipResult = await ImageManipulator.manipulateAsync(
+          result.assets[0].uri,
+          [{ resize: { width: 300 } }],
+          {
+            compress: 0.7,
+          }
+        );
+
+        await uploadProfilePicture(manipResult.uri).unwrap();
+        setImageKey(Date.now());
+        await refetch();
+        Alert.alert('Success', 'Profile picture updated successfully');
+      }
+    } catch (err) {
+      console.log(err);
+      Alert.alert('Error', 'Failed to update profile picture');
+    } finally {
+      setIsUploading(false);
+      setShowImageModal(false);
+    }
+  };
+
+  console.log(profileData?.data.following)
+
   const onRefresh = async () => {
     setRefreshing(true);
-    // Simulate API call
-    setTimeout(() => {
-      setRefreshing(false);
-    }, 1500);
+    await refetch();
+    setRefreshing(false);
   };
   
   const renderTabBar = () => (
@@ -156,22 +220,24 @@ export default function ProfileScreen() {
       case 'following':
         return (
           <FlatList
-            data={Array(5).fill(0).map((_, i) => ({
-              id: i,
-              name: `User ${i + 1}`,
-              username: `user${i + 1}`,
-              avatar: `https://i.pravatar.cc/150?img=${i + 1}`
-            }))}
+            data={followingsData?.data || []}
             renderItem={({ item, index }) => (
               <Animated.View 
                 entering={FadeInDown.delay(100 * index).springify()}
                 style={[styles.userItem, { borderBottomColor: colors.border }]}
               >
-                <Image source={{ uri: item.avatar }} style={styles.userAvatar} />
+                <Image 
+                  source={{ 
+                    uri: item.photo_url || 'https://ui-avatars.com/api/?background=random&color=fff&name=' + encodeURIComponent(item.firstName + ' ' + item.lastName)
+                  }} 
+                  style={styles.userAvatar} 
+                />
                 <View style={styles.userInfo}>
-                  <Text style={[styles.userName, { color: colors.text }]}>{item.name}</Text>
+                  <Text style={[styles.userName, { color: colors.text }]}>
+                    {item.firstName} {item.lastName}
+                  </Text>
                   <Text style={[styles.userUsername, { color: colors.textSecondary }]}>
-                    @{item.username}
+                    @{item.userName}
                   </Text>
                 </View>
                 <TouchableOpacity 
@@ -181,7 +247,7 @@ export default function ProfileScreen() {
                 </TouchableOpacity>
               </Animated.View>
             )}
-            keyExtractor={(item) => item.id.toString()}
+            keyExtractor={(item) => item.userId}
             contentContainerStyle={styles.contentList}
             showsVerticalScrollIndicator={false}
             refreshControl={
@@ -216,51 +282,107 @@ export default function ProfileScreen() {
       <StatusBar style={isDark ? 'light' : 'dark'} />
       
       <View style={styles.header}>
+        <TouchableOpacity 
+          style={[styles.backButton, { backgroundColor: colors.card }]}
+          onPress={() => router.back()}
+        >
+          <ArrowLeft size={20} color={colors.text} />
+        </TouchableOpacity>
         <Text style={[styles.title, { color: colors.text }]}>Profile</Text>
         
-        <TouchableOpacity 
-          style={[styles.settingsButton, { backgroundColor: colors.card, borderColor: colors.border }]}
-          onPress={() => router.push('/(screens)/settings')}
-        >
-          <Settings size={20} color={colors.textSecondary} />
-        </TouchableOpacity>
+        <View style={styles.headerButtons}>
+          <View style={styles.headerButtonContainer}>
+            <TouchableOpacity 
+              style={[styles.headerButton, { backgroundColor: colors.card, borderColor: colors.border }]}
+              onPress={() => router.push('/wallet')}
+            >
+              <Wallet size={20} color={colors.textSecondary} />
+            </TouchableOpacity>
+            <Text style={[styles.headerButtonLabel, { color: colors.textSecondary }]}>Wallet</Text>
+          </View>
+          
+          <View style={styles.headerButtonContainer}>
+            <TouchableOpacity 
+              style={[styles.headerButton, { backgroundColor: colors.card, borderColor: colors.border }]}
+              onPress={() => router.push('/(screens)/settings')}
+            >
+              <Settings size={20} color={colors.textSecondary} />
+            </TouchableOpacity>
+            <Text style={[styles.headerButtonLabel, { color: colors.textSecondary }]}>Settings</Text>
+          </View>
+        </View>
       </View>
       
       <View style={styles.profileContainer}>
         <View style={styles.profileHeader}>
-          <View style={styles.avatarContainer}>
+          <TouchableOpacity 
+            style={styles.avatarContainer}
+            onPress={() => setShowImageModal(true)}
+            disabled={isUploading}
+          >
             <Image 
-              source={{ uri: 'https://i.pravatar.cc/300' }}
+              key={imageKey}
+              source={{ 
+                uri: profileData?.data?.photo_url 
+                  ? `${profileData.data.photo_url}?t=${imageKey}` 
+                  : 'https://ui-avatars.com/api/?background=random&color=fff&name=' + encodeURIComponent(profileData?.data?.firstName + ' ' + profileData?.data?.lastName)
+              }}
               style={styles.avatar}
             />
-          </View>
+            {isUploading ? (
+              <View style={[styles.uploadingOverlay, { backgroundColor: colors.primary + '80' }]}>
+                <ActivityIndicator size="large" color="white" />
+                <Text style={styles.uploadingText}>Uploading...</Text>
+              </View>
+            ) : (
+              <View style={[styles.editAvatarButton, { backgroundColor: colors.primary }]}>
+                <Camera size={16} color="white" />
+              </View>
+            )}
+          </TouchableOpacity>
           
           <View style={styles.profileInfo}>
             <Text style={[styles.profileName, { color: colors.text }]}>
-              {user?.name || 'Jane Doe'}
+              {profileData?.data?.firstName} {profileData?.data?.lastName}
             </Text>
             <Text style={[styles.profileUsername, { color: colors.textSecondary }]}>
-              @{user?.username || 'janedoe'}
+              @{profileData?.data?.userName}
             </Text>
             
             <View style={styles.statsContainer}>
               <View style={styles.statItem}>
-                <Text style={[styles.statValue, { color: colors.text }]}>24</Text>
+                <Text style={[styles.statValue, { color: colors.text }]}>
+                  {profileData?.data?.hostedGiveaways?.length || 0}
+                </Text>
+                <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Giveaways</Text>
+              </View>
+              
+              <View style={[styles.divider, { backgroundColor: colors.border }]} />
+
+              
+              <View style={styles.statItem}>
+                <Text style={[styles.statValue, { color: colors.text }]}>
+                  {profileData?.data?.hostedEvents?.length || 0}
+                </Text>
                 <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Events</Text>
               </View>
               
               <View style={[styles.divider, { backgroundColor: colors.border }]} />
               
               <View style={styles.statItem}>
-                <Text style={[styles.statValue, { color: colors.text }]}>8</Text>
-                <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Giveaways</Text>
+                <Text style={[styles.statValue, { color: colors.text }]}>
+                  {profileData?.data?.giveawayWins || 0}
+                </Text>
+                <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Wins</Text>
               </View>
               
               <View style={[styles.divider, { backgroundColor: colors.border }]} />
               
               <View style={styles.statItem}>
-                <Text style={[styles.statValue, { color: colors.text }]}>153</Text>
-                <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Following</Text>
+                <Text style={[styles.statValue, { color: colors.text }]}>
+                  {profileData?.data?.followers?.length || 0}
+                </Text>
+                <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Followers</Text>
               </View>
             </View>
           </View>
@@ -275,6 +397,45 @@ export default function ProfileScreen() {
       
       {renderTabBar()}
       {renderContent()}
+
+      {/* Image Update Modal */}
+      <Modal
+        visible={showImageModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowImageModal(false)}
+      >
+        <TouchableOpacity 
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowImageModal(false)}
+        >
+          <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>Update Profile Picture</Text>
+              <TouchableOpacity onPress={() => setShowImageModal(false)}>
+                <X size={24} color={colors.text} />
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity 
+              style={[styles.modalOption, { borderBottomColor: colors.border }]}
+              onPress={() => handleImageUpdate('camera')}
+            >
+              <Camera size={24} color={colors.primary} />
+              <Text style={[styles.modalOptionText, { color: colors.text }]}>Take Photo</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={[styles.modalOption, { borderBottomColor: colors.border }]}
+              onPress={() => handleImageUpdate('library')}
+            >
+              <ImageIcon size={24} color={colors.primary} />
+              <Text style={[styles.modalOptionText, { color: colors.text }]}>Choose from Library</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -285,17 +446,31 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingTop: 8,
     paddingBottom: 16,
   },
-  title: {
-    fontSize: 24,
-    fontFamily: 'SF-Pro-Display-Bold',
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  settingsButton: {
+  title: {
+    fontSize: 20,
+    fontFamily: 'Inter-Bold',
+  },
+  headerButtons: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  headerButtonContainer: {
+    alignItems: 'center',
+  },
+  headerButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
@@ -475,5 +650,69 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 12,
     fontFamily: 'SF-Pro-Text-Medium',
+  },
+  editAvatarButton: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: 'white',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 16,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontFamily: 'Inter-Bold',
+  },
+  modalOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+  },
+  modalOptionText: {
+    marginLeft: 12,
+    fontSize: 16,
+    fontFamily: 'Inter-Medium',
+  },
+  uploadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  uploadingText: {
+    color: 'white',
+    marginTop: 8,
+    fontSize: 12,
+    fontFamily: 'Inter-Medium',
+  },
+  headerButtonLabel: {
+    fontSize: 10,
+    fontFamily: 'Inter-Medium',
+    marginTop: 2,
   },
 });

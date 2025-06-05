@@ -2,11 +2,13 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTheme } from '@/hooks/useTheme';
-import { ArrowLeft, Mail, User, Lock, Phone } from 'lucide-react-native';
+import { ArrowLeft, Mail, User, Lock, Phone, Eye, EyeOff } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import PhoneInput from 'react-native-phone-number-input';
 import OTPTextInput from 'react-native-otp-textinput';
+import { useVerifyEmailMutation, useValidateEmailCodeMutation, useSignupMutation } from '../../redux/slice/authApiSlice';
+import { parsePhoneNumber } from "awesome-phonenumber";
 
 type SignUpStep = 'email' | 'verify' | 'details' | 'password';
 
@@ -34,20 +36,34 @@ export default function Register() {
   const [signUpData, setSignUpData] = useState<Partial<SignUpData>>({});
   const [verificationCode, setVerificationCode] = useState('');
   const [phoneInputRef] = useState(React.createRef<any>());
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  const [verifyEmail] = useVerifyEmailMutation();
+  const [validateEmailCode] = useValidateEmailCodeMutation();
+  const [signup] = useSignupMutation();
+  const phoneValidator = parsePhoneNumber(`${"+"+signUpData.countryCode}${signUpData.phoneNumber}`, { regionCode: "+"+signUpData.countryCode });  
+
 
   const handleEmailSubmit = async () => {
     if (!signUpData.email) {
       setError('Please enter your email address');
       return;
     }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(signUpData.email)) {
+      setError('Please enter a valid email address');
+      return;
+    }
+
     setLoading(true);
     try {
-      // Simulate API call to send verification code
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      await verifyEmail({ email: signUpData.email.toLowerCase() }).unwrap();
       setCurrentStep('verify');
       setError(null);
-    } catch (err) {
-      setError('Failed to send verification code');
+    } catch (err: any) {
+      setError(err.data?.message || 'Failed to send verification code');
     } finally {
       setLoading(false);
     }
@@ -58,14 +74,17 @@ export default function Register() {
       setError('Please enter verification code');
       return;
     }
+
     setLoading(true);
     try {
-      // Simulate API call to verify code
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      await validateEmailCode({ 
+        email: signUpData.email!.toLowerCase(), 
+        code: verificationCode 
+      }).unwrap();
       setCurrentStep('details');
       setError(null);
-    } catch (err) {
-      setError('Invalid verification code');
+    } catch (err: any) {
+      setError(err.data?.message || 'Invalid verification code');
     } finally {
       setLoading(false);
     }
@@ -79,18 +98,38 @@ export default function Register() {
     setCurrentStep('password');
   };
 
+  console.log(signUpData);
+
   const handleSignUp = async () => {
     if (!signUpData.password || !signUpData.pin) {
       setError('Please fill in all fields');
       return;
     }
+
+    if (signUpData.password.length < 8) {
+      setError('Password must be at least 8 characters long');
+      return;
+    }
+
     setLoading(true);
     try {
-      // Simulate API call to create account
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      await signup({
+        email: signUpData.email!.toLowerCase(),
+        firstName: signUpData.firstName!,
+        lastName: signUpData.lastName!,
+        userName: signUpData.userName!,
+        password: signUpData.password!,
+        phoneNumber: phoneValidator.number?.e164,
+        country: signUpData.country!,
+        region: signUpData.region!,
+        subRegion: signUpData.subRegion!,
+        currency: signUpData.currency!,
+        countryCode: signUpData.countryCode!,
+        pin: signUpData.pin!
+      }).unwrap();
       router.replace('/(tabs)');
-    } catch (err) {
-      setError('Failed to create account');
+    } catch (err: any) {
+      setError(err.data?.message || 'Failed to create account');
     } finally {
       setLoading(false);
     }
@@ -110,7 +149,7 @@ export default function Register() {
           placeholder="Email address"
           placeholderTextColor={colors.textSecondary}
           value={signUpData.email}
-          onChangeText={(text) => setSignUpData({ ...signUpData, email: text })}
+          onChangeText={(text) => setSignUpData({ ...signUpData, email: text.toLowerCase() })}
           keyboardType="email-address"
           autoCapitalize="none"
         />
@@ -138,7 +177,7 @@ export default function Register() {
       <OTPTextInput
         handleTextChange={setVerificationCode}
         defaultValue={verificationCode}
-        inputCount={6}
+        inputCount={5}
         textInputStyle={[
           styles.otpInput,
           { backgroundColor: colors.card, color: colors.text, borderColor: colors.border }
@@ -221,9 +260,11 @@ export default function Register() {
           onChangeCountry={(country) => {
             setSignUpData({
               ...signUpData,
-              country: country.name,
-              countryCode: country.cca2,
-              currency: country.currency?.[0] || 'USD',
+              country: country.name as string,
+              countryCode: country.callingCode[0] as string,
+              currency: country.currency?.[0] || 'NGN',
+              region: country.region as string,
+              subRegion: country.subregion as string,
             });
           }}
           containerStyle={[
@@ -260,8 +301,15 @@ export default function Register() {
           placeholderTextColor={colors.textSecondary}
           value={signUpData.password}
           onChangeText={(text) => setSignUpData({ ...signUpData, password: text })}
-          secureTextEntry
+          secureTextEntry={!showPassword}
         />
+        <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+          {showPassword ? (
+            <EyeOff size={20} color={colors.textSecondary} />
+          ) : (
+            <Eye size={20} color={colors.textSecondary} />
+          )}
+        </TouchableOpacity>
       </View>
 
       <View style={[styles.inputContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -270,8 +318,17 @@ export default function Register() {
           style={[styles.input, { color: colors.text }]}
           placeholder="Confirm Password"
           placeholderTextColor={colors.textSecondary}
-          secureTextEntry
+          value={signUpData.confirmPassword}
+          onChangeText={(text) => setSignUpData({ ...signUpData, confirmPassword: text })}
+          secureTextEntry={!showConfirmPassword}
         />
+        <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)}>
+          {showConfirmPassword ? (
+            <EyeOff size={20} color={colors.textSecondary} />
+          ) : (
+            <Eye size={20} color={colors.textSecondary} />
+          )}
+        </TouchableOpacity>
       </View>
 
       <View style={[styles.inputContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -281,7 +338,11 @@ export default function Register() {
           placeholder="PIN (4 digits)"
           placeholderTextColor={colors.textSecondary}
           value={signUpData.pin}
-          onChangeText={(text) => setSignUpData({ ...signUpData, pin: text })}
+          onChangeText={(text) => {
+            // Only allow numbers and limit to 4 digits
+            const numericValue = text.replace(/[^0-9]/g, '').slice(0, 4);
+            setSignUpData({ ...signUpData, pin: numericValue });
+          }}
           keyboardType="numeric"
           maxLength={4}
           secureTextEntry

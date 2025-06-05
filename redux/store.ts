@@ -3,9 +3,6 @@ import { apiSlice } from './slice/apiSlice';
 import AuthReducer from "./slice/authSlice";
 import NotificationSlice from './slice/notificationSlice';
 
-
-
-
 export const store = configureStore({
   reducer: {
     auth: AuthReducer,

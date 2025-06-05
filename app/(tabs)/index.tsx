@@ -6,14 +6,16 @@ import { useRouter } from 'expo-router';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { BlurView } from 'expo-blur';
 import { useAuth } from '@/hooks/useAuth';
+import { getStorageData } from '@/utils';
 
 export default function HomeScreen() {
   const { colors, isDark } = useTheme();
-  const { user } = useAuth();
+  const { user: userData } = useAuth();
   const router = useRouter();
   const [hasEvents] = useState(false);
   const [hasGiveaways] = useState(false);
   const [hasPromotions] = useState(false);
+
 
   const EmptyStateCard = ({ 
     title, 
@@ -64,7 +66,7 @@ export default function HomeScreen() {
             />
             <View style={styles.userInfo}>
               <Text style={[styles.greeting, { color: colors.textSecondary }]}>Welcome back</Text>
-              <Text style={[styles.username, { color: colors.text }]}>{user?.name || 'Guest'}</Text>
+              <Text style={[styles.username, { color: colors.text }]}>{userData?.firstName + " " + userData?.lastName}</Text>
             </View>
           </TouchableOpacity>
           

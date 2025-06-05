@@ -1,5 +1,18 @@
 import React, { createContext, useState, useEffect, ReactNode } from 'react';
 import { router } from 'expo-router';
+import { Alert } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useDispatch } from 'react-redux';
+import { useLoginMutation } from '../redux/slice/authApiSlice';
+import {
+  LoginStatus,
+  setAuthStatusAsync,
+  setCredentials,
+  setCredentialsAsync,
+  setLoginStatus,
+} from '../redux/slice/authSlice';
+import { AppDispatch } from '../redux/store';
+import { storeData, storeTokens } from '@/utils';
 
 interface User {
   id: string;
@@ -7,24 +20,32 @@ interface User {
   name: string;
   username?: string;
   accountType: 'individual' | 'brand';
+  enablePush?: boolean;
+  deviceLoginCount?: number;
+  accessToken?: string;
+  refreshToken?: string;
 }
 
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  loginStatus: LoginStatus;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, name: string, accountType: 'individual' | 'brand') => Promise<void>;
   signOut: () => void;
+  completeOnboarding: () => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthContextType>({
   user: null,
   isAuthenticated: false,
   isLoading: true,
+  loginStatus: LoginStatus.INACTIVE,
   signIn: async () => {},
   signUp: async () => {},
   signOut: () => {},
+  completeOnboarding: async () => {},
 });
 
 interface AuthProviderProps {
@@ -34,64 +55,82 @@ interface AuthProviderProps {
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  
+  const [loginStatus, setLoginStatusState] = useState<LoginStatus>(LoginStatus.INACTIVE);
+  const [existingAccountOnDevice, setExistingAccountOnDevice] = useState<User | null>(null);
+  const dispatch = useDispatch<AppDispatch>();
+  const [login] = useLoginMutation();
+
   useEffect(() => {
-    // Check if user is already authenticated
-    const checkAuth = async () => {
-      try {
-        // Simulate retrieving user from storage
-        const storedUser = null; // In a real app, this would be AsyncStorage.getItem('user')
-        
-        if (storedUser) {
-          setUser(JSON.parse(storedUser));
-        }
-      } catch (error) {
-        console.error('Error checking auth state:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
     checkAuth();
   }, []);
-  
-  // Mock sign in function
-  const signIn = async (email: string, password: string) => {
-    setIsLoading(true);
-    
+
+  const checkAuth = async () => {
     try {
-      // Simulate API request delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const userData = await AsyncStorage.getItem('userData')
       
-      // In a real app, this would be a call to your authentication API
-      const userData: User = {
-        id: '1',
-        email,
-        name: 'Jane Doe',
-        username: 'janedoe',
-        accountType: 'individual',
-      };
-      
-      setUser(userData);
-      // In a real app, store the user data
-      // await AsyncStorage.setItem('user', JSON.stringify(userData));
+      if (userData) {
+        const parsedUserData = JSON.parse(userData);
+        setUser(parsedUserData);
+        setExistingAccountOnDevice(parsedUserData);
+        setLoginStatusState(LoginStatus.ACTIVE);
+      }
     } catch (error) {
-      console.error('Error signing in:', error);
-      throw error;
+      console.error('Error checking auth state:', error);
     } finally {
       setIsLoading(false);
     }
   };
-  
-  // Mock sign up function
-  const signUp = async (email: string, password: string, name: string, accountType: 'individual' | 'brand') => {
-    setIsLoading(true);
-    
+
+  const signIn = async (email: string, password: string) => {
     try {
-      // Simulate API request delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      setIsLoading(true);
+      const res = await login({ email, password }).unwrap();
       
-      // In a real app, this would be a call to your authentication API
+      if (res.data) {
+        const tokens = {
+          accessToken: res.data.accessToken,
+          refreshToken: res.data.refreshToken,
+        };
+
+        await storeTokens(JSON.stringify(tokens));
+        const userData: User = { ...res.data };
+        const { accessToken, refreshToken, ...userWithoutTokens } = userData;
+
+        await storeData('userData', userWithoutTokens);
+        
+        setUser(userWithoutTokens);
+        setLoginStatusState(LoginStatus.ACTIVE);
+        dispatch(setLoginStatus(LoginStatus.ACTIVE));
+        dispatch(setAuthStatusAsync({ status: true }));
+        dispatch(setCredentials(userWithoutTokens));
+        dispatch(
+          setCredentialsAsync({
+            ...userWithoutTokens,
+            deviceLoginCount: existingAccountOnDevice?.deviceLoginCount
+              ? existingAccountOnDevice.deviceLoginCount + 1
+              : 1,
+          })
+        );
+
+        setExistingAccountOnDevice(userWithoutTokens);
+        router.replace('/(tabs)');
+      }
+    } catch (err: any) {
+      if (err.error) {
+        Alert.alert('Error', err.error.message || 'Failed to sign in');
+      } else {
+        Alert.alert('Error', err?.data?.message || 'Something went wrong');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const signUp = async (email: string, password: string, name: string, accountType: 'individual' | 'brand') => {
+    // Implement sign up logic here
+    setIsLoading(true);
+    try {
+      // Add your sign up API call here
       const userData: User = {
         id: '1',
         email,
@@ -100,8 +139,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       };
       
       setUser(userData);
-      // In a real app, store the user data
-      // await AsyncStorage.setItem('user', JSON.stringify(userData));
+      await AsyncStorage.setItem('userData', JSON.stringify(userData));
     } catch (error) {
       console.error('Error signing up:', error);
       throw error;
@@ -109,23 +147,38 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setIsLoading(false);
     }
   };
-  
-  // Mock sign out function
-  const signOut = () => {
-    setUser(null);
-    // In a real app, remove the user data
-    // AsyncStorage.removeItem('user');
-    router.replace('/login');
+
+  const signOut = async () => {
+    try {
+      await AsyncStorage.multiRemove(['tokens', 'userData']);
+      setUser(null);
+      setLoginStatusState(LoginStatus.INACTIVE);
+      dispatch(setLoginStatus(LoginStatus.INACTIVE));
+      router.replace('/login');
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
   };
-  
+
+  const completeOnboarding = async () => {
+    try {
+      await AsyncStorage.setItem('onboardingComplete', 'true');
+      router.replace('/login');
+    } catch (error) {
+      console.error('Error completing onboarding:', error);
+    }
+  };
+
   return (
     <AuthContext.Provider value={{
       user,
       isAuthenticated: !!user,
       isLoading,
+      loginStatus,
       signIn,
       signUp,
       signOut,
+      completeOnboarding,
     }}>
       {children}
     </AuthContext.Provider>

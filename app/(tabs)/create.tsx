@@ -398,7 +398,7 @@ export default function CreateScreen() {
               >
                 <Gift size={20} color={colors.textSecondary} />
                 <Text style={[styles.inputWithIcon, { color: colors.text }]}>
-                  {selectedCoins ? `${selectedCoins.toLocaleString()} NIM` : 'Select amount'}
+                  {selectedCoins ? `${selectedCoins.toLocaleString()} NIM` : 'Select price'}
                 </Text>
               </TouchableOpacity>
             </Animated.View>

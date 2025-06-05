@@ -1,13 +1,8 @@
 import * as SecureStore from "expo-secure-store";
-import { Alert, Platform, Share } from "react-native";
+import { Alert } from "react-native";
 import { numericFormatter } from "react-number-format";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import * as FileSystem from "expo-file-system";
-import * as Sharing from "expo-sharing";
-import { useError, ErrorType } from "../hooks";
 import * as WebBrowser from "expo-web-browser";
-import * as converter from "currency-exchanger-js";
-import Toast from "react-native-toast-message";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -73,7 +68,7 @@ export const getStorageData = async (key: string) => {
   }
 };
 
-export const storeData = async (key: string, value: any) => {
+export const storeData = async (key: string, value: Record<string, unknown> | Record<string, unknown>[]) => {
   try {
     const jsonValue = JSON.stringify(value);
     await AsyncStorage.setItem(key, jsonValue);
@@ -184,116 +179,6 @@ export const currencyValueToString = (value: number) => String(value || 0);
 
 export const randomNumber = () => Math.floor(Math.random() * 100) + 1;
 
-const nimboonCacheDir = FileSystem.cacheDirectory + "nimboon/";
-const nimboonDocDir = FileSystem.documentDirectory + "nimboon/";
-
-export const ensureDirExists = async (dir: any) => {
-  let dirInfo = await FileSystem.getInfoAsync(dir);
-  if (!dirInfo.exists) {
-    await FileSystem.makeDirectoryAsync(dir, { intermediates: true });
-    dirInfo = await FileSystem.getInfoAsync(dir);
-  }
-  return dirInfo;
-};
-
-export const isSharingAvailable = async () => await Sharing.isAvailableAsync();
-
-export const shareContent = async (
-  data: any,
-  receiptId: string,
-  fileType: string
-) => {
-  const dirDetails = await ensureDirExists(nimboonCacheDir);
-  if (dirDetails.exists) {
-    const downloadPath = `${dirDetails.uri}-${receiptId}.${fileType}`;
-    try {
-      await FileSystem.writeAsStringAsync(downloadPath, data, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
-      const canShare = await isSharingAvailable();
-      if (canShare) {
-        await Sharing.shareAsync(downloadPath);
-      } else {
-        useError(ErrorType.ERROR, "Sharing is not available.");
-      }
-    } catch (e: any) {
-      useError(ErrorType.ERROR, e);
-    }
-  } else {
-    useError(ErrorType.ERROR, "Directory doesn't exists.");
-  }
-};
-
-export const downloadImage = async (pdfData: any, receiptId: string) => {
-  if (Platform.OS === "ios") return shareReceipt(pdfData, receiptId);
-
-  const dirDetails = await ensureDirExists(nimboonDocDir);
-  if (dirDetails.exists) {
-    try {
-      const billantedUri =
-        FileSystem.StorageAccessFramework.getUriForDirectoryInRoot("billanted");
-      const permissions =
-        await FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync(
-          billantedUri
-        );
-      if (permissions.granted) {
-        const fileUri = await FileSystem.StorageAccessFramework.createFileAsync(
-          permissions.directoryUri,
-          `Billanted-Receipt-${receiptId}`,
-          "application/pdf"
-        );
-        if (fileUri) {
-          const file = await FileSystem.writeAsStringAsync(fileUri, pdfData, {
-            encoding: FileSystem.EncodingType.Base64,
-          });
-          Alert.alert(
-            "Download Successful",
-            `Billanted-Receipt-${receiptId}.pdf download successful.`
-          );
-        } else {
-          useError(ErrorType.ERROR, "Unable to create file.");
-        }
-      } else {
-        useError(
-          ErrorType.ERROR,
-          "Unable grant file system storage permission."
-        );
-      }
-    } catch (e: any) {
-      useError(ErrorType.ERROR, e);
-    }
-  } else {
-    useError(ErrorType.ERROR, "Directory doesn't exists.");
-  }
-};
-
-export const getUserAlias = (user: any) => {
-  if (!user) return null;
-  
-  const firstName = user?.firstName || '';
-  const lastName = user?.lastName || '';
-  const fullName = `${firstName} ${lastName}`.trim();
-  
-  return {
-    userId: user?.userId,
-    fullName: fullName || '',
-    firstName: firstName,
-    lastName: lastName,
-    initials: `${firstName?.charAt(0)?.toUpperCase() || ''}${lastName?.charAt(0)?.toUpperCase() || ''}`,
-    phoneNumber: user?.phoneNumber,
-    emailAddress: user?.emailAddress,
-    country: user?.country,
-    userName: user?.userName || '',
-    photoUrl: user?.photo_url,
-  };
-};
-
-export const firstLetterUpperCase = (value: string) => {
-  const uppercaseVlue =
-    value.charAt(0).toUpperCase() + value.slice(1).toLocaleString();
-  return uppercaseVlue;
-};
-
 export const getEpochTimestamp = (dateString: Date, timeString: Date) => {
   if (dateString && timeString) {
     const date = `${dateString?.getFullYear()}-${
@@ -310,85 +195,10 @@ export const getEpochTimestamp = (dateString: Date, timeString: Date) => {
   }
 };
 
-export const calculateEndTime = (
-  startDate: Date,
-  numberOfQuestions: number
-) => {
-  const questionTimeInSeconds = 30;
-
-  const totalTimeInSeconds = numberOfQuestions * questionTimeInSeconds;
-
-  const totalTimeInMilliseconds = totalTimeInSeconds * 1000;
-
-  const startTime = new Date(startDate).getTime();
-
-  const endDate = new Date(startTime + totalTimeInMilliseconds);
-
-  return endDate;
-};
-
 export const _handlePressButtonAsync = async (url: string) => {
   await WebBrowser.openBrowserAsync(url);
 };
 
-export const showAlert = ({
-  action1,
-  action2,
-  title,
-  desc,
-  btnText1,
-  btnText2
-}: {
-  action1: () => void;
-  action2: () => void;
-  title: string;
-  desc: string;
-  btnText1: string;
-  btnText2: string
-}) => {
-  Alert.alert(
-    title,
-    desc,
-    [
-      {
-        text: btnText1,
-        onPress: action1,
-        style: "cancel",
-      },
-      {
-        text: btnText2,
-        onPress: action2,
-        style: "default",
-      },
-    ],
-    { cancelable: false }
-  );
-};
-
-export const shareLink = async ({link, title, successText}:{link: string, title: string, successText:string} ) => {
-  const shareMessage = `${title}: ${link}`;
-  try {
-    const canShare = await isSharingAvailable();
-    if (canShare) {
-      const result = await Share.share({
-        message: shareMessage,
-      });
-      if (result.action === Share.sharedAction) {
-        if (result.activityType) {
-          Toast.show({
-            type: "success",
-            text1: "Content Shared",
-            text2: successText,
-          });
-        }
-      }
-    } else {
-      useError(ErrorType.ERROR, "Sharing is not available.");
-    }
-  } catch (e: any) {
-    useError(ErrorType.ERROR, e);
-  }
-};
 
 export function getNetworkProvider(phoneNumber: string, category: string) {
   const networkPrefixes = {

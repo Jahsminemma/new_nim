@@ -1,10 +1,36 @@
-import { storeData, removeStoredData, removeToken } from "@/types";
-import {createAsyncThunk, createSlice} from "@reduxjs/toolkit"
+import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { storeData, removeStoredData, removeToken } from "@/utils";
+import {createAsyncThunk} from "@reduxjs/toolkit"
 
-export const enum LoginStatus  {
-    ACTIVE="ACTIVE",
-    INACTIVE="INACTIVE"
+export enum LoginStatus {
+    ACTIVE = 'ACTIVE',
+    INACTIVE = 'INACTIVE',
+    EXPIRED = 'EXPIRED'
 }
+
+export interface User {
+    id: string;
+    email: string;
+    name: string;
+    username?: string;
+    accountType: 'individual' | 'brand';
+    accessToken?: string;
+    refreshToken?: string;
+}
+
+interface AuthState {
+    user: User | null;
+    loginStatus: LoginStatus;
+    isLoading: boolean;
+    hasCompletedOnboarding: boolean;
+}
+
+const initialState: AuthState = {
+    user: null,
+    loginStatus: LoginStatus.INACTIVE,
+    isLoading: false,
+    hasCompletedOnboarding: false,
+};
 
 export const setCredentialsAsync = createAsyncThunk(
     'auth/setCredentialsAsync',
@@ -28,23 +54,36 @@ export const logOutAsync = createAsyncThunk(
     }
 );
 
-const authSlice = createSlice({
+export const authSlice = createSlice({
     name: 'auth',
-    initialState: { user: {}, loginStatus: LoginStatus.INACTIVE},
+    initialState,
     reducers: {
-        setCredentials: (state, action) => {
-            state.user = { ...state.user, ...action.payload }
+        setCredentials: (state, action: PayloadAction<User | null>) => {
+            state.user = action.payload;
         },
-        setLoginStatus: (state, action) => {
-            state.loginStatus = action.payload
+        setLoginStatus: (state, action: PayloadAction<LoginStatus>) => {
+            state.loginStatus = action.payload;
         },
-        logOut: (state, action) => {
-            state.user = {}
+        setLoading: (state, action: PayloadAction<boolean>) => {
+            state.isLoading = action.payload;
+        },
+        setOnboardingComplete: (state, action: PayloadAction<boolean>) => {
+            state.hasCompletedOnboarding = action.payload;
+        },
+        logout: (state, action) => {
+            state.user = null
             setAuthStatusAsync({status: false})
             removeToken().then()
         }
     },
-})
+});
 
-export const {setCredentials, logOut, setLoginStatus } = authSlice.actions
-export default authSlice.reducer
+export const { 
+    setCredentials, 
+    setLoginStatus, 
+    setLoading, 
+    setOnboardingComplete,
+    logout 
+} = authSlice.actions;
+
+export default authSlice.reducer;
