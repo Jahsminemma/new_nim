@@ -43,11 +43,11 @@ export const PageLoadingModal = ({ visible, onClose }: PageLoadingModalProps) =>
   if (!visible) return null;
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: colors.background + '50' }]}>
       <View style={styles.loaderContainer}>
         <Animated.View style={[styles.circleContainer, animatedStyle]}>
           <LinearGradient
-            colors={[colors.primary, colors.primary + '80']}
+            colors={[colors.primary, colors.primary + "80"]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.gradientCircle}
@@ -76,8 +76,8 @@ const styles = StyleSheet.create({
     zIndex: 9999,
   },
   loaderContainer: {
-    width: 120,
-    height: 120,
+    width: 90,
+    height: 90,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -97,7 +97,9 @@ const styles = StyleSheet.create({
     borderStyle: 'dashed',
   },
   logo: {
-    width: 80,
-    height: 80,
+    width: 50,
+    height: 50,
+    borderRadius: 50,
+    opacity: 80
   },
 }); 

@@ -365,7 +365,7 @@ export default function Register() {
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardAvoid}
+        style={{ flex: 1 }}
       >
         <ScrollView
           showsVerticalScrollIndicator={false}

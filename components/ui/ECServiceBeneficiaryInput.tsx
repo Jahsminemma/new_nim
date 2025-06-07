@@ -25,12 +25,12 @@ interface IBeneficiaryInput extends TextInputProps {
   onRenew: () => void;
   onSelect: () => void;
   beneficiaries: Beneficiary[];
-  showInputBtn: boolean
+  showInputBtn: boolean;
 }
 
 const MAX_PHONE_LENGTH = 11;
 
-const BeneficiaryInput = ({
+const ECServiceBeneficiaryInput = ({
   open,
   setOpen,
   value,
@@ -43,7 +43,7 @@ const BeneficiaryInput = ({
   showInputBtn,
   ...props
 }: IBeneficiaryInput) => {
-  const { activeTheme:colorScheme } = useTheme();
+  const { colors } = useTheme();
 
   const [beneficiaryData, setBeneficiariesData] = useState(beneficiaries);
 
@@ -76,21 +76,30 @@ const BeneficiaryInput = ({
   };
 
   return (
-    <View className="mt-0.5 z-90">
+    <View style={[styles.container, { zIndex: 90 }]}>
       <CustomTextInput
         height={70}
         multiline
         borderColor="transparent"
-        style={{
-          fontWeight: "700",
-          fontSize: 25,
-          paddingVertical: 10,
-        }}
+        bgColor={colors.card}
+        color={colors.text}
+        style={[
+          styles.input,
+          { 
+            color: colors.text,
+            backgroundColor: colors.card 
+          }
+        ]}
         customRightIcon={
           <View>
-      {label !== "meter" && value.length > 5 && showInputBtn && <TouchableOpacity className="bg-[#ff6454] p-2 rounded-xl" onPress={() => onRenew()}>
-            <Text>Proceed</Text>
-          </TouchableOpacity>}
+            {label !== "meter" && value.length > 5 && showInputBtn && (
+              <TouchableOpacity 
+                style={[styles.proceedButton, { backgroundColor: colors.primary }]} 
+                onPress={() => onRenew()}
+              >
+                <Text style={styles.proceedButtonText}>Proceed</Text>
+              </TouchableOpacity>
+            )}
           </View>
         }
         placeholder={`Enter your ${label} number`}
@@ -104,18 +113,21 @@ const BeneficiaryInput = ({
         {...props}
       />
       <View
-        style={{
-          borderBottomColor: "#fff",
-          borderWidth: 0.5,
-          bottom: 15,
-          marginHorizontal: 20,
-        }}
+        style={[
+          styles.divider,
+          {
+            borderBottomColor: colors.border,
+            borderWidth: 0.5,
+            bottom: 15,
+            marginHorizontal: 20,
+          }
+        ]}
       />
       {beneficiaries.length > 0 && (
         <DropDownPicker
           open={open && beneficiaries.length > 0}
           value={value}
-          CloseIconComponent={() => <X />}
+          CloseIconComponent={() => <X color={colors.text} size={16} />}
           items={beneficiaryData.map((b) => ({
             label: b.label,
             value: b.value,
@@ -124,32 +136,65 @@ const BeneficiaryInput = ({
           closeOnBackPressed
           setValue={setValue}
           showArrowIcon={true}
-          textStyle={{
-            color: "#777",
-            fontSize: 14,
-            paddingHorizontal: 10,
-          }}
+          textStyle={[
+            styles.dropdownText,
+            {
+              color: colors.text,
+              fontSize: 14,
+              paddingHorizontal: 10,
+            }
+          ]}
           onChangeValue={handleSelectBeneficiary}
           style={[
             styles.dropdown,
             {
-              zIndex: 100000,
+              zIndex: 100000999,
+              backgroundColor: colors.card,
+              borderColor: colors.border,
             },
           ]}
           placeholder={`Select ${label} number from beneficiary list`}
-          dropDownContainerStyle={{
-            borderWidth: 0,
-            top: 40,
-            zIndex: 100000,
-          }}
-          listItemLabelStyle={{
-          }}
-          labelStyle={{
-            fontSize: 14,
-          }}
-          placeholderStyle={styles.placeholderStyle}
+          dropDownContainerStyle={[
+            styles.dropdownContainer,
+            {
+              borderWidth: 0,
+              top: 40,
+              zIndex: 100000,
+              backgroundColor: colors.card,
+              borderColor: colors.border,
+              elevation: 10000,
+              shadowColor: '#000',
+              shadowOffset: {
+                width: 0,
+                height: 2,
+              },
+              shadowOpacity: 0.25,
+              shadowRadius: 3.84,
+            }
+          ]}
+          listItemLabelStyle={[
+            styles.listItemLabel,
+            { color: colors.text }
+          ]}
+          labelStyle={[
+            styles.labelStyle,
+            {
+              fontSize: 14,
+              color: colors.text,
+            }
+          ]}
+          placeholderStyle={[
+            styles.placeholderStyle,
+            {
+              fontSize: 12,
+              fontWeight: "700",
+              color: colors.textSecondary,
+            }
+          ]}
           setItems={setBeneficiariesData}
           maxHeight={200}
+          zIndex={100000}
+          zIndexInverse={1000}
         />
       )}
     </View>
@@ -159,6 +204,7 @@ const BeneficiaryInput = ({
 const styles = StyleSheet.create({
   container: {
     marginTop: 1,
+    zIndex: 999999
   },
   input: {
     height: 50,
@@ -169,6 +215,17 @@ const styles = StyleSheet.create({
     fontSize: 25,
     fontWeight: "700",
   },
+  proceedButton: {
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  proceedButtonText: {
+    color: 'white',
+    fontSize: 12,
+    fontFamily: 'Inter-Bold',
+  },
+  divider: {},
   dropdown: {
     height: 20,
     borderWidth: 0,
@@ -177,11 +234,19 @@ const styles = StyleSheet.create({
     bottom: 10,
     color: "blue",
   },
+  dropdownContainer: {
+    zIndex:999999
+  },
+  dropdownText: {},
+  listItemLabel: {
+    fontFamily: 'Inter-Regular',
+  },
+  labelStyle: {
+    fontFamily: 'Inter-Medium',
+  },
   placeholderStyle: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: "#777",
+    fontFamily: 'Inter-Medium',
   },
 });
 
-export default BeneficiaryInput;
+export default ECServiceBeneficiaryInput;

@@ -8,6 +8,7 @@ import {
   View,
   Text
 } from "react-native";
+import { useTheme } from "@/hooks/useTheme";
 
 interface ICustomTextInput extends TextInputProps {
   label: string;
@@ -30,9 +31,7 @@ interface ICustomTextInput extends TextInputProps {
 
 const CustomTextInput = ({
   multiSelectComponent,
-  richText,
   height,
-  phoneInput,
   label,
   customRightIcon,
   customLeftIcon,
@@ -49,44 +48,41 @@ const CustomTextInput = ({
   maxLength,
   ...props
 }: ICustomTextInput) => {
+  const { colors } = useTheme();
 
   return (
-    <SafeAreaView className="overflow-hidden">
-      <Text style={styles.label}>{label}</Text>
+    <SafeAreaView style={styles.safeArea}>
+      <Text style={[styles.label, { color: colors.text }]}>{label}</Text>
         <View
           style={{
             ...styles.container,
-            borderColor: borderColor || "#B3B4B4",
+            borderColor: borderColor || colors.border,
             height: multiline ? height : 50,
-            backgroundColor: bgColor && bgColor,
+            backgroundColor: colors.card,
             overflow: "hidden"
           }}
         >
-          <View style={{ flex: 1, flexDirection: "row", alignItems: "center" }}>
+          <View style={styles.inputWrapper}>
             {customLeftIcon && (
-              <View className="mr-4 bg-transparent">{customLeftIcon}</View>
+              <View style={styles.leftIconContainer}>{customLeftIcon}</View>
             )}
             {prefixText && (
               <Text
-                style={{
-                  fontWeight: "400",
-                  fontSize: 15,
-                  paddingRight: 2,
-                  opacity: 0.9,
-                }}
+                style={[styles.prefixText, { color: colors.textSecondary }]}
               >
                 {prefixText}
               </Text>
             )}
             <View
-              style={{ backgroundColor: bgColor && bgColor }}
-              className="w-full"
+              style={[styles.inputContainer, { backgroundColor: colors.card }]}
             >
               <TextInput
                 style={[
                   styles.textInput,
                   {
                     height: multiline ? 130 : undefined,
+                    width: '80%',
+                    color
                   },
                 ]}
                 defaultValue={value}
@@ -94,15 +90,15 @@ const CustomTextInput = ({
                 autoCapitalize="none"
                 autoCorrect={false}
                 placeholder={placeholder || label}
+                placeholderTextColor={colors.textSecondary}
                 textAlignVertical={multiline ? "top" : "center"}
                 multiline={multiline}
-                placeholderTextColor={bgColor ? color ? color : "#cce" : "#777"}
                 maxLength={maxLength} 
                 onChangeText={(text: string) => setValue(text)}
                 {...props}
               />
               {multiSelectComponent && (
-                <View className="border w-[100%] mt-2 border-gray-300 border-0.5" />
+                <View style={styles.multiSelectBorder} />
               )}
               {multiSelectComponent}
             </View>
@@ -114,6 +110,9 @@ const CustomTextInput = ({
 };
 
 const styles = StyleSheet.create({
+  safeArea: {
+    overflow: 'hidden',
+  },
   container: {
     flexDirection: "row",
     justifyContent: "center",
@@ -122,6 +121,27 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     paddingHorizontal: 15,
     width: "100%",
+  },
+  inputWrapper: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  leftIconContainer: {
+    marginRight: 16,
+    backgroundColor: 'transparent',
+  },
+  inputContainer: {
+    width: '100%',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  prefixText: {
+    fontWeight: "400",
+    fontSize: 15,
+    paddingRight: 2,
+    opacity: 0.9,
   },
   label: {
     fontSize: 15,
@@ -134,6 +154,12 @@ const styles = StyleSheet.create({
     fontSize: 15,
     marginRight: 8,
     fontFamily: "MulishRegular",
+  },
+  multiSelectBorder: {
+    borderWidth: 0.5,
+    width: '100%',
+    marginTop: 8,
+    borderColor: '#D1D5DB',
   },
   separator: {
     marginVertical: 30,

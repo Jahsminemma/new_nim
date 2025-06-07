@@ -15,6 +15,7 @@ interface ServiceProviderProps {
   serviceCategory: string;
   setPreferredPackage: any;
 }
+import { useTheme } from '@/hooks/useTheme';
 
 export default function ServiceProvider({
   activeIcon,
@@ -25,6 +26,7 @@ export default function ServiceProvider({
   const handleIconClick = (data: any) => {
     setActiveIcon(data);
   };
+  const {colors} = useTheme()
 
   const { serviceProviderOptions, isLoading, errorFetching  } = useServiceProviderOptions(
     serviceCategory.toUpperCase()
@@ -32,9 +34,10 @@ export default function ServiceProvider({
 
   return (
     <View style={styles.serviceProvider}>
-      <Text style={styles.actionText}>Select service provider</Text>
+      
+      <Text style={[styles.actionText, {color: colors.text}]}>Select service provider</Text>
       {isLoading ? (
-        <Text>Loading service providers...</Text>
+        <Text style={{fontWeight: "bold", color: colors.textSecondary}}>Loading service providers...</Text>
       ) : (
         <SafeAreaView style={styles.serviceProviderIconContainer}>
           {serviceProviderOptions &&
@@ -46,7 +49,7 @@ export default function ServiceProvider({
                     setPreferredPackage({});
                     handleIconClick(provider);
                   }}
-                  className="flex items-center gap-1"
+                  style={{display:"flex", alignItems:"center", gap: 5}}
                 >
                   <View
                     style={{
@@ -73,7 +76,7 @@ export default function ServiceProvider({
                       resizeMode="contain"
                     />
                   </View>
-                  <Text className="font-extrabold text-[#aaa]">
+                  <Text style={{fontWeight: "bold", color: colors.textSecondary}}>
                     {provider.name}
                   </Text>
                 </TouchableOpacity>
@@ -94,6 +97,7 @@ const styles = StyleSheet.create({
   serviceProviderIconContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
+    alignItems: "center"
   },
   actionText: {
     fontSize: 15,

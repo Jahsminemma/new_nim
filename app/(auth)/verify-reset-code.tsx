@@ -1,8 +1,7 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, Keyboard, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, Keyboard, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useTheme } from '../../hooks/useTheme';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { ArrowLeft } from 'lucide-react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -59,86 +58,91 @@ export default function VerifyResetCodeScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      <StatusBar style={isDark ? 'light' : 'dark'} />
-      
-      <View style={styles.header}>
-        <TouchableOpacity 
-          style={[styles.backButton, { backgroundColor: colors.card }]}
-          onPress={() => router.back()}
-        >
-          <ArrowLeft size={20} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Verify Code</Text>
-        <View style={styles.placeholder} />
-      </View>
-
-      <Animated.View 
-        entering={FadeInDown.delay(200).springify()}
-        style={styles.content}
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={{ flex: 1 }}
       >
-        <Text style={[styles.description, { color: colors.textSecondary }]}>
-          Enter the 6-digit code sent to your email address.
-        </Text>
-
-        {error && (
-          <View style={[styles.errorContainer, { backgroundColor: colors.error + '20' }]}>
-            <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>
-          </View>
-        )}
-
-        <View style={styles.otpContainer}>
-          {Array(OTP_LENGTH).fill(0).map((_, index) => (
-            <TextInput
-              key={index}
-              ref={ref => inputRefs.current[index] = ref!}
-              style={[
-                styles.otpInput,
-                { 
-                  backgroundColor: colors.card,
-                  borderColor: colors.border,
-                  color: colors.text
-                }
-              ]}
-              maxLength={1}
-              keyboardType="number-pad"
-              value={otp[index]}
-              onChangeText={text => handleOtpChange(text, index)}
-              onKeyPress={e => handleKeyPress(e, index)}
-              editable={!isLoading}
-            />
-          ))}
+        <StatusBar style={isDark ? 'light' : 'dark'} />
+        
+        <View style={styles.header}>
+          <TouchableOpacity 
+            style={[styles.backButton, { backgroundColor: colors.card }]}
+            onPress={() => router.back()}
+          >
+            <ArrowLeft size={20} color={colors.text} />
+          </TouchableOpacity>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>Verify Code</Text>
+          <View style={styles.placeholder} />
         </View>
 
-        <TouchableOpacity
-          style={[
-            styles.button,
-            { 
-              backgroundColor: isButtonDisabled ? colors.primary + '80' : colors.primary,
-              opacity: isButtonDisabled ? 0.7 : 1
-            }
-          ]}
-          onPress={handleVerify}
-          disabled={isButtonDisabled}
+        <Animated.View 
+          entering={FadeInDown.delay(200).springify()}
+          style={styles.content}
         >
-          {isLoading ? (
-            <ActivityIndicator color="white" />
-          ) : (
-            <Text style={styles.buttonText}>Verify Code</Text>
-          )}
-        </TouchableOpacity>
-
-        <TouchableOpacity 
-          style={styles.resendContainer}
-          onPress={() => router.back()}
-          disabled={isLoading}
-        >
-          <Text style={[styles.resendText, { color: colors.primary }]}>
-            Didn't receive the code? Try again
+          <Text style={[styles.description, { color: colors.textSecondary }]}>
+            Enter the 6-digit code sent to your email address.
           </Text>
-        </TouchableOpacity>
-      </Animated.View>
-    </SafeAreaView>
+
+          {error && (
+            <View style={[styles.errorContainer, { backgroundColor: colors.error + '20' }]}>
+              <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>
+            </View>
+          )}
+
+          <View style={styles.otpContainer}>
+            {Array(OTP_LENGTH).fill(0).map((_, index) => (
+              <TextInput
+                key={index}
+                ref={ref => inputRefs.current[index] = ref!}
+                style={[
+                  styles.otpInput,
+                  { 
+                    backgroundColor: colors.card,
+                    borderColor: colors.border,
+                    color: colors.text
+                  }
+                ]}
+                maxLength={1}
+                keyboardType="number-pad"
+                value={otp[index]}
+                onChangeText={text => handleOtpChange(text, index)}
+                onKeyPress={e => handleKeyPress(e, index)}
+                editable={!isLoading}
+              />
+            ))}
+          </View>
+
+          <TouchableOpacity
+            style={[
+              styles.button,
+              { 
+                backgroundColor: isButtonDisabled ? colors.primary + '80' : colors.primary,
+                opacity: isButtonDisabled ? 0.7 : 1
+              }
+            ]}
+            onPress={handleVerify}
+            disabled={isButtonDisabled}
+          >
+            {isLoading ? (
+              <ActivityIndicator color="white" />
+            ) : (
+              <Text style={styles.buttonText}>Verify Code</Text>
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={styles.resendContainer}
+            onPress={() => router.back()}
+            disabled={isLoading}
+          >
+            <Text style={[styles.resendText, { color: colors.primary }]}>
+              Didn't receive the code? Try again
+            </Text>
+          </TouchableOpacity>
+        </Animated.View>
+      </KeyboardAvoidingView>
+    </View>
   );
 }
 

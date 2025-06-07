@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, Image, Platform, Alert, FlatList } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, Image, Platform, Alert, FlatList, KeyboardAvoidingView } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useTheme } from '@/hooks/useTheme';
 import { ArrowLeft, Camera, Calendar as CalendarIcon, Clock, MapPin, Ticket, Info, Gift, CirclePlus as PlusCircle, X, Search, Users } from 'lucide-react-native';
@@ -216,319 +216,326 @@ export default function CreateScreen() {
   );
   
   return (
-    <SafeLayoutWrapper>
-      <StatusBar style={isDark ? 'light' : 'dark'} />
-      
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={{ flex: 1 }}
       >
-        <View style={styles.header}>
-          <TouchableOpacity 
-            onPress={() => router.back()}
-            style={[styles.backButton, { backgroundColor: colors.card, borderColor: colors.border }]}
-          >
-            <ArrowLeft size={20} color={colors.text} />
-          </TouchableOpacity>
+        <SafeLayoutWrapper>
+          <StatusBar style={isDark ? 'light' : 'dark'} />
           
-          <Text style={[styles.headerTitle, { color: colors.text }]}>
-            Create {creationType === 'event' ? 'Event' : 'Giveaway'}
-          </Text>
-          
-          <View style={styles.placeholder} />
-        </View>
-        
-        <View style={styles.typeSelector}>
-          <TouchableOpacity
-            style={[
-              styles.typeButton,
-              creationType === 'event' && { backgroundColor: colors.primary },
-              { borderColor: colors.border }
-            ]}
-            onPress={() => setCreationType('event')}
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.scrollContent}
           >
-            <Text 
-              style={[
-                styles.typeButtonText,
-                { color: creationType === 'event' ? 'white' : colors.text }
-              ]}
-            >
-              Event
-            </Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity
-            style={[
-              styles.typeButton,
-              creationType === 'giveaway' && { backgroundColor: colors.primary },
-              { borderColor: colors.border }
-            ]}
-            onPress={() => setCreationType('giveaway')}
-          >
-            <Text 
-              style={[
-                styles.typeButtonText,
-                { color: creationType === 'giveaway' ? 'white' : colors.text }
-              ]}
-            >
-              Giveaway
-            </Text>
-          </TouchableOpacity>
-        </View>
-        
-        <TouchableOpacity 
-          style={[styles.imageSelector, { backgroundColor: colors.card, borderColor: colors.border }]}
-          onPress={pickImage}
-        >
-          {image ? (
-            <View style={styles.imagePreviewContainer}>
-              <Image source={{ uri: image }} style={styles.imagePreview} />
+            <View style={styles.header}>
               <TouchableOpacity 
-                style={[styles.removeImageButton, { backgroundColor: colors.error }]}
-                onPress={() => setImage(null)}
+                onPress={() => router.back()}
+                style={[styles.backButton, { backgroundColor: colors.card, borderColor: colors.border }]}
               >
-                <X size={20} color="white" />
+                <ArrowLeft size={20} color={colors.text} />
+              </TouchableOpacity>
+              
+              <Text style={[styles.headerTitle, { color: colors.text }]}>
+                Create {creationType === 'event' ? 'Event' : 'Giveaway'}
+              </Text>
+              
+              <View style={styles.placeholder} />
+            </View>
+            
+            <View style={styles.typeSelector}>
+              <TouchableOpacity
+                style={[
+                  styles.typeButton,
+                  creationType === 'event' && { backgroundColor: colors.primary },
+                  { borderColor: colors.border }
+                ]}
+                onPress={() => setCreationType('event')}
+              >
+                <Text 
+                  style={[
+                    styles.typeButtonText,
+                    { color: creationType === 'event' ? 'white' : colors.text }
+                  ]}
+                >
+                  Event
+                </Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[
+                  styles.typeButton,
+                  creationType === 'giveaway' && { backgroundColor: colors.primary },
+                  { borderColor: colors.border }
+                ]}
+                onPress={() => setCreationType('giveaway')}
+              >
+                <Text 
+                  style={[
+                    styles.typeButtonText,
+                    { color: creationType === 'giveaway' ? 'white' : colors.text }
+                  ]}
+                >
+                  Giveaway
+                </Text>
               </TouchableOpacity>
             </View>
-          ) : (
-            <View style={styles.imagePlaceholder}>
-              <Camera size={40} color={colors.textSecondary} />
-              <Text style={[styles.imagePlaceholderText, { color: colors.textSecondary }]}>
-                Add Cover Image
-              </Text>
-            </View>
-          )}
-        </TouchableOpacity>
-        
-        <Animated.View entering={FadeInDown.delay(100).springify()}>
-          <Text style={[styles.inputLabel, { color: colors.text }]}>Title</Text>
-          <TextInput
-            style={[styles.input, { backgroundColor: colors.card, color: colors.text, borderColor: colors.border }]}
-            placeholder="Enter title"
-            placeholderTextColor={colors.textSecondary}
-            value={title}
-            onChangeText={setTitle}
-          />
-        </Animated.View>
-        
-        <Animated.View entering={FadeInDown.delay(200).springify()}>
-          <Text style={[styles.inputLabel, { color: colors.text }]}>Description</Text>
-          <TextInput
-            style={[
-              styles.input, 
-              styles.textArea, 
-              { backgroundColor: colors.card, color: colors.text, borderColor: colors.border }
-            ]}
-            placeholder="Enter description"
-            placeholderTextColor={colors.textSecondary}
-            value={description}
-            onChangeText={setDescription}
-            multiline
-            numberOfLines={4}
-            textAlignVertical="top"
-          />
-        </Animated.View>
-        
-        {creationType === 'event' ? (
-          <>
-            <Animated.View entering={FadeInDown.delay(300).springify()} style={styles.row}>
-              <View style={styles.halfWidth}>
-                <Text style={[styles.inputLabel, { color: colors.text }]}>Date</Text>
-                <TouchableOpacity
-                  style={[styles.iconInput, { backgroundColor: colors.card, borderColor: colors.border }]}
-                  onPress={() => setShowDatePicker(true)}
-                >
-                  <CalendarIcon size={20} color={colors.textSecondary} />
-                  <Text style={[styles.pickerText, { color: colors.text }]}>
-                    {formatDate(date)}
+            
+            <TouchableOpacity 
+              style={[styles.imageSelector, { backgroundColor: colors.card, borderColor: colors.border }]}
+              onPress={pickImage}
+            >
+              {image ? (
+                <View style={styles.imagePreviewContainer}>
+                  <Image source={{ uri: image }} style={styles.imagePreview} />
+                  <TouchableOpacity 
+                    style={[styles.removeImageButton, { backgroundColor: colors.error }]}
+                    onPress={() => setImage(null)}
+                  >
+                    <X size={20} color="white" />
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <View style={styles.imagePlaceholder}>
+                  <Camera size={40} color={colors.textSecondary} />
+                  <Text style={[styles.imagePlaceholderText, { color: colors.textSecondary }]}>
+                    Add Cover Image
                   </Text>
-                </TouchableOpacity>
-              </View>
-              
-              <View style={styles.halfWidth}>
-                <Text style={[styles.inputLabel, { color: colors.text }]}>Time</Text>
-                <TouchableOpacity
-                  style={[styles.iconInput, { backgroundColor: colors.card, borderColor: colors.border }]}
-                  onPress={() => setShowTimePicker(true)}
-                >
-                  <Clock size={20} color={colors.textSecondary} />
-                  <Text style={[styles.pickerText, { color: colors.text }]}>
-                    {formatTime(time)}
-                  </Text>
-                </TouchableOpacity>
-              </View>
+                </View>
+              )}
+            </TouchableOpacity>
+            
+            <Animated.View entering={FadeInDown.delay(100).springify()}>
+              <Text style={[styles.inputLabel, { color: colors.text }]}>Title</Text>
+              <TextInput
+                style={[styles.input, { backgroundColor: colors.card, color: colors.text, borderColor: colors.border }]}
+                placeholder="Enter title"
+                placeholderTextColor={colors.textSecondary}
+                value={title}
+                onChangeText={setTitle}
+              />
             </Animated.View>
             
-            <Animated.View entering={FadeInDown.delay(400).springify()}>
-              <Text style={[styles.inputLabel, { color: colors.text }]}>Location</Text>
-              <View style={[styles.iconInput, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                <MapPin size={20} color={colors.textSecondary} />
-                <TextInput
-                  style={[styles.inputWithIcon, { color: colors.text }]}
-                  placeholder="Enter location"
-                  placeholderTextColor={colors.textSecondary}
-                  value={location}
-                  onChangeText={setLocation}
-                />
-              </View>
+            <Animated.View entering={FadeInDown.delay(200).springify()}>
+              <Text style={[styles.inputLabel, { color: colors.text }]}>Description</Text>
+              <TextInput
+                style={[
+                  styles.input, 
+                  styles.textArea, 
+                  { backgroundColor: colors.card, color: colors.text, borderColor: colors.border }
+                ]}
+                placeholder="Enter description"
+                placeholderTextColor={colors.textSecondary}
+                value={description}
+                onChangeText={setDescription}
+                multiline
+                numberOfLines={4}
+                textAlignVertical="top"
+              />
             </Animated.View>
             
-            <Animated.View entering={FadeInDown.delay(500).springify()}>
-              <Text style={[styles.inputLabel, { color: colors.text }]}>Ticket Price</Text>
-              <View style={[styles.iconInput, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                <Ticket size={20} color={colors.textSecondary} />
-                <TextInput
-                  style={[styles.inputWithIcon, { color: colors.text }]}
-                  placeholder="$0.00"
-                  placeholderTextColor={colors.textSecondary}
-                  value={ticketPrice}
-                  onChangeText={setTicketPrice}
-                  keyboardType="numeric"
+            {creationType === 'event' ? (
+              <>
+                <Animated.View entering={FadeInDown.delay(300).springify()} style={styles.row}>
+                  <View style={styles.halfWidth}>
+                    <Text style={[styles.inputLabel, { color: colors.text }]}>Date</Text>
+                    <TouchableOpacity
+                      style={[styles.iconInput, { backgroundColor: colors.card, borderColor: colors.border }]}
+                      onPress={() => setShowDatePicker(true)}
+                    >
+                      <CalendarIcon size={20} color={colors.textSecondary} />
+                      <Text style={[styles.pickerText, { color: colors.text }]}>
+                        {formatDate(date)}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                  
+                  <View style={styles.halfWidth}>
+                    <Text style={[styles.inputLabel, { color: colors.text }]}>Time</Text>
+                    <TouchableOpacity
+                      style={[styles.iconInput, { backgroundColor: colors.card, borderColor: colors.border }]}
+                      onPress={() => setShowTimePicker(true)}
+                    >
+                      <Clock size={20} color={colors.textSecondary} />
+                      <Text style={[styles.pickerText, { color: colors.text }]}>
+                        {formatTime(time)}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </Animated.View>
+                
+                <Animated.View entering={FadeInDown.delay(400).springify()}>
+                  <Text style={[styles.inputLabel, { color: colors.text }]}>Location</Text>
+                  <View style={[styles.iconInput, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                    <MapPin size={20} color={colors.textSecondary} />
+                    <TextInput
+                      style={[styles.inputWithIcon, { color: colors.text }]}
+                      placeholder="Enter location"
+                      placeholderTextColor={colors.textSecondary}
+                      value={location}
+                      onChangeText={setLocation}
+                    />
+                  </View>
+                </Animated.View>
+                
+                <Animated.View entering={FadeInDown.delay(500).springify()}>
+                  <Text style={[styles.inputLabel, { color: colors.text }]}>Ticket Price</Text>
+                  <View style={[styles.iconInput, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                    <Ticket size={20} color={colors.textSecondary} />
+                    <TextInput
+                      style={[styles.inputWithIcon, { color: colors.text }]}
+                      placeholder="$0.00"
+                      placeholderTextColor={colors.textSecondary}
+                      value={ticketPrice}
+                      onChangeText={setTicketPrice}
+                      keyboardType="numeric"
+                    />
+                  </View>
+                </Animated.View>
+              </>
+            ) : (
+              <>
+                <Animated.View entering={FadeInDown.delay(300).springify()}>
+                  <Text style={[styles.inputLabel, { color: colors.text }]}>Prize Amount</Text>
+                  <TouchableOpacity
+                    style={[styles.iconInput, { backgroundColor: colors.card, borderColor: colors.border }]}
+                    onPress={() => setShowCoinSelector(true)}
+                  >
+                    <Gift size={20} color={colors.textSecondary} />
+                    <Text style={[styles.inputWithIcon, { color: colors.text }]}>
+                      {selectedCoins ? `${selectedCoins.toLocaleString()} NIM` : 'Select price'}
+                    </Text>
+                  </TouchableOpacity>
+                </Animated.View>
+
+                <CoinSelector
+                  visible={showCoinSelector}
+                  onClose={() => setShowCoinSelector(false)}
+                  onSelect={setSelectedCoins}
                 />
-              </View>
-            </Animated.View>
-          </>
-        ) : (
-          <>
-            <Animated.View entering={FadeInDown.delay(300).springify()}>
-              <Text style={[styles.inputLabel, { color: colors.text }]}>Prize Amount</Text>
-              <TouchableOpacity
-                style={[styles.iconInput, { backgroundColor: colors.card, borderColor: colors.border }]}
-                onPress={() => setShowCoinSelector(true)}
+
+                <Animated.View entering={FadeInDown.delay(400).springify()}>
+                  <Text style={[styles.inputLabel, { color: colors.text }]}>Game Type</Text>
+                  <View style={styles.gameTypeContainer}>
+                    {renderGameTypeOption('trivia', 'Trivia Quiz')}
+                    {renderGameTypeOption('wordguess', 'Word Guess')}
+                    {renderGameTypeOption('social', 'Social Challenge')}
+                    {renderGameTypeOption('number', 'Number Puzzle')}
+                  </View>
+                </Animated.View>
+
+                <Animated.View entering={FadeInDown.delay(500).springify()}>
+                  <Text style={[styles.inputLabel, { color: colors.text }]}>Participant Eligibility</Text>
+                  <View style={styles.eligibilityContainer}>
+                    {renderEligibilityOption('all', 'All Users')}
+                    {renderEligibilityOption('followers', 'Followers Only')}
+                    {renderEligibilityOption('specific', 'Specific Users')}
+                  </View>
+                </Animated.View>
+
+                {eligibility === 'specific' && renderUserSearchSection()}
+
+                <Animated.View entering={FadeInDown.delay(600).springify()}>
+                  <Text style={[styles.inputLabel, { color: colors.text }]}>Number of Winners</Text>
+                  <View style={[styles.iconInput, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                    <Users size={20} color={colors.textSecondary} />
+                    <TextInput
+                      style={[styles.inputWithIcon, { color: colors.text }]}
+                      placeholder="Enter number of winners"
+                      placeholderTextColor={colors.textSecondary}
+                      value={numberOfWinners}
+                      onChangeText={setNumberOfWinners}
+                      keyboardType="numeric"
+                    />
+                  </View>
+                </Animated.View>
+                
+                <Animated.View entering={FadeInDown.delay(700).springify()} style={styles.row}>
+                  <View style={styles.halfWidth}>
+                    <Text style={[styles.inputLabel, { color: colors.text }]}>Start Date</Text>
+                    <TouchableOpacity
+                      style={[styles.iconInput, { backgroundColor: colors.card, borderColor: colors.border }]}
+                      onPress={() => setShowDatePicker(true)}
+                    >
+                      <CalendarIcon size={20} color={colors.textSecondary} />
+                      <Text style={[styles.pickerText, { color: colors.text }]}>
+                        {formatDate(date)}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                  
+                  <View style={styles.halfWidth}>
+                    <Text style={[styles.inputLabel, { color: colors.text }]}>End Date</Text>
+                    <TouchableOpacity
+                      style={[styles.iconInput, { backgroundColor: colors.card, borderColor: colors.border }]}
+                      onPress={() => setShowEndDatePicker(true)}
+                    >
+                      <CalendarIcon size={20} color={colors.textSecondary} />
+                      <Text style={[styles.pickerText, { color: colors.text }]}>
+                        {formatDate(endDate)}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </Animated.View>
+              </>
+            )}
+            
+            <Animated.View entering={FadeInDown.delay(800).springify()}>
+              <TouchableOpacity 
+                style={[styles.submitButton, { backgroundColor: colors.primary }]}
+                onPress={handleCreateSubmit}
               >
-                <Gift size={20} color={colors.textSecondary} />
-                <Text style={[styles.inputWithIcon, { color: colors.text }]}>
-                  {selectedCoins ? `${selectedCoins.toLocaleString()} NIM` : 'Select price'}
+                <Text style={styles.submitButtonText}>
+                  Create {creationType === 'event' ? 'Event' : 'Giveaway'}
                 </Text>
               </TouchableOpacity>
             </Animated.View>
+          </ScrollView>
 
-            <CoinSelector
-              visible={showCoinSelector}
-              onClose={() => setShowCoinSelector(false)}
-              onSelect={setSelectedCoins}
+          {showDatePicker && (
+            <DateTimePicker
+              value={date}
+              mode="date"
+              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+              onChange={(event, selectedDate) => {
+                setShowDatePicker(false);
+                if (selectedDate) {
+                  setDate(selectedDate);
+                }
+              }}
             />
+          )}
 
-            <Animated.View entering={FadeInDown.delay(400).springify()}>
-              <Text style={[styles.inputLabel, { color: colors.text }]}>Game Type</Text>
-              <View style={styles.gameTypeContainer}>
-                {renderGameTypeOption('trivia', 'Trivia Quiz')}
-                {renderGameTypeOption('wordguess', 'Word Guess')}
-                {renderGameTypeOption('social', 'Social Challenge')}
-                {renderGameTypeOption('number', 'Number Puzzle')}
-              </View>
-            </Animated.View>
+          {showTimePicker && (
+            <DateTimePicker
+              value={time}
+              mode="time"
+              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+              onChange={(event, selectedDate) => {
+                setShowTimePicker(false);
+                if (selectedDate) {
+                  setTime(selectedDate);
+                }
+              }}
+            />
+          )}
 
-            <Animated.View entering={FadeInDown.delay(500).springify()}>
-              <Text style={[styles.inputLabel, { color: colors.text }]}>Participant Eligibility</Text>
-              <View style={styles.eligibilityContainer}>
-                {renderEligibilityOption('all', 'All Users')}
-                {renderEligibilityOption('followers', 'Followers Only')}
-                {renderEligibilityOption('specific', 'Specific Users')}
-              </View>
-            </Animated.View>
-
-            {eligibility === 'specific' && renderUserSearchSection()}
-
-            <Animated.View entering={FadeInDown.delay(600).springify()}>
-              <Text style={[styles.inputLabel, { color: colors.text }]}>Number of Winners</Text>
-              <View style={[styles.iconInput, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                <Users size={20} color={colors.textSecondary} />
-                <TextInput
-                  style={[styles.inputWithIcon, { color: colors.text }]}
-                  placeholder="Enter number of winners"
-                  placeholderTextColor={colors.textSecondary}
-                  value={numberOfWinners}
-                  onChangeText={setNumberOfWinners}
-                  keyboardType="numeric"
-                />
-              </View>
-            </Animated.View>
-            
-            <Animated.View entering={FadeInDown.delay(700).springify()} style={styles.row}>
-              <View style={styles.halfWidth}>
-                <Text style={[styles.inputLabel, { color: colors.text }]}>Start Date</Text>
-                <TouchableOpacity
-                  style={[styles.iconInput, { backgroundColor: colors.card, borderColor: colors.border }]}
-                  onPress={() => setShowDatePicker(true)}
-                >
-                  <CalendarIcon size={20} color={colors.textSecondary} />
-                  <Text style={[styles.pickerText, { color: colors.text }]}>
-                    {formatDate(date)}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-              
-              <View style={styles.halfWidth}>
-                <Text style={[styles.inputLabel, { color: colors.text }]}>End Date</Text>
-                <TouchableOpacity
-                  style={[styles.iconInput, { backgroundColor: colors.card, borderColor: colors.border }]}
-                  onPress={() => setShowEndDatePicker(true)}
-                >
-                  <CalendarIcon size={20} color={colors.textSecondary} />
-                  <Text style={[styles.pickerText, { color: colors.text }]}>
-                    {formatDate(endDate)}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </Animated.View>
-          </>
-        )}
-        
-        <Animated.View entering={FadeInDown.delay(800).springify()}>
-          <TouchableOpacity 
-            style={[styles.submitButton, { backgroundColor: colors.primary }]}
-            onPress={handleCreateSubmit}
-          >
-            <Text style={styles.submitButtonText}>
-              Create {creationType === 'event' ? 'Event' : 'Giveaway'}
-            </Text>
-          </TouchableOpacity>
-        </Animated.View>
-      </ScrollView>
-
-      {showDatePicker && (
-        <DateTimePicker
-          value={date}
-          mode="date"
-          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-          onChange={(event, selectedDate) => {
-            setShowDatePicker(false);
-            if (selectedDate) {
-              setDate(selectedDate);
-            }
-          }}
-        />
-      )}
-
-      {showTimePicker && (
-        <DateTimePicker
-          value={time}
-          mode="time"
-          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-          onChange={(event, selectedDate) => {
-            setShowTimePicker(false);
-            if (selectedDate) {
-              setTime(selectedDate);
-            }
-          }}
-        />
-      )}
-
-      {showEndDatePicker && (
-        <DateTimePicker
-          value={endDate}
-          mode="date"
-          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-          onChange={(event, selectedDate) => {
-            setShowEndDatePicker(false);
-            if (selectedDate) {
-              setEndDate(selectedDate);
-            }
-          }}
-        />
-      )}
-    </SafeLayoutWrapper>
+          {showEndDatePicker && (
+            <DateTimePicker
+              value={endDate}
+              mode="date"
+              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+              onChange={(event, selectedDate) => {
+                setShowEndDatePicker(false);
+                if (selectedDate) {
+                  setEndDate(selectedDate);
+                }
+              }}
+            />
+          )}
+        </SafeLayoutWrapper>
+      </KeyboardAvoidingView>
+    </View>
   );
 }
 

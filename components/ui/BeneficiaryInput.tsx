@@ -1,14 +1,10 @@
 import React, { Dispatch, SetStateAction, useEffect, useState } from "react";
-import {
-  View,
-  StyleSheet,
-  Keyboard,
-  Text
-} from "react-native";
+import { View, StyleSheet, Text } from "react-native";
 import DropDownPicker from "react-native-dropdown-picker";
 import CustomTextInput from "./CustomTextInput";
 import ContactList from "./ContactList";
 import { X } from "lucide-react-native";
+import { useTheme } from "@/hooks/useTheme";
 
 type Beneficiary = {
   label: string;
@@ -32,13 +28,12 @@ const BeneficiaryInput = ({
   setValue,
   beneficiaries,
 }: IBeneficiaryInput) => {
-
+  const { colors } = useTheme();
   const [beneficiaryData, setBeneficiariesData] = useState(beneficiaries);
 
   useEffect(() => {
     setBeneficiariesData(beneficiaries);
   }, [beneficiaries]);
-
 
   const formatPhoneNumber = (phone: string) => {
     return phone.replace(/(\d{3})(\d{4})(\d{4})/, "$1 $2 $3");
@@ -56,19 +51,16 @@ const BeneficiaryInput = ({
     }
   
     setValue(phone.trim());
-  
     const filtered = beneficiaries.filter((b) => b.value.startsWith(phone.replace(/\s/g, "")));
     setBeneficiariesData(filtered);
-
     
-  
     if (filtered.length === 0 || phone.length === MAX_PHONE_LENGTH + 2) {
       setOpen(false);
     } else {
       setOpen(true);
     }
-    if(phone.length === MAX_PHONE_LENGTH + 2){
-      Keyboard.dismiss()
+    if(phone.length === MAX_PHONE_LENGTH + 2) {
+      Keyboard.dismiss();
     }
   };  
 
@@ -77,78 +69,59 @@ const BeneficiaryInput = ({
   };
 
   return (
-    <View className="mt-0.5 z-90">
+    <View style={styles.container}>
       <CustomTextInput
         height={70}
         multiline
         borderColor="transparent"
         customLeftIcon={
-          <Text className="font-extrabold text-[#aaa] text-[20px]">
+          <Text style={[styles.countryCode, { color: colors.textSecondary }]}>
             +234
           </Text>
         }
-        style={{
-          fontSize: 20,
-          fontWeight: "800",
-          paddingVertical: 10,
-        }}
+        style={[styles.input, { color: colors.text }]}
         placeholder="0xx xxxx xxxx"
         value={formatPhoneNumber(value || "")}
         onChangeText={handlePhoneInput}
         onTouchStart={() => setOpen(true)}
         maxLength={MAX_PHONE_LENGTH + 2}
-        label={""}
+        label=""
         inputType="phone-pad"
         setValue={handlePhoneInput}
         customRightIcon={
           <ContactList onSelect={(number) => setValue(number)} />
         }
       />
-         <View
-        style={{
-          borderBottomColor: "#fff",
-          borderWidth: 0.5,
-          bottom: 15,
-          marginHorizontal: 20,
-        }}
-      />
-    {beneficiaries.length > 0 &&  <DropDownPicker
-        open={open && beneficiaries.length > 0}
-        value={value}
-        CloseIconComponent={() => <X />}
-        items={beneficiaryData.map((b) => ({
-          label: b.label,
-          value: b.value,
-        }))}
-        setOpen={setOpen}
-        closeOnBackPressed
-        setValue={setValue}
-        showArrowIcon={true}
-        textStyle={{
-          color: "red",
-          fontSize: 14,
-          paddingHorizontal: 10,
-        }}
-        onChangeValue={handleSelectBeneficiary}
-        style={[
-          styles.dropdown,
-          {
-            zIndex: 100000,
-          },
-        ]}
-        placeholder="Select number from beneficiary list"
-        dropDownContainerStyle={{
-          borderWidth: 0,
-          top: 40,
-          zIndex: 100000,
-        }}
-        labelStyle={{
-          fontSize: 14,
-        }}
-        placeholderStyle={styles.placeholderStyle}
-        setItems={setBeneficiariesData}
-        maxHeight={200}
-      />}
+      
+      <View style={[styles.divider, { backgroundColor: colors.border }]} />
+      
+      {beneficiaries.length > 0 && (
+        <DropDownPicker
+          open={open && beneficiaries.length > 0}
+          value={value}
+          CloseIconComponent={() => <X color={colors.text} size={16} />}
+          items={beneficiaryData.map((b) => ({
+            label: b.label,
+            value: b.value,
+          }))}
+          setOpen={setOpen}
+          closeOnBackPressed
+          setValue={setValue}
+          showArrowIcon={true}
+          textStyle={[styles.dropdownText, { color: colors.text }]}
+          onChangeValue={handleSelectBeneficiary}
+          style={[styles.dropdown, { backgroundColor: colors.card }]}
+          placeholder="Select number from beneficiary list"
+          dropDownContainerStyle={[styles.dropdownContainer, { 
+            backgroundColor: colors.card,
+            borderColor: colors.border 
+          }]}
+          labelStyle={[styles.dropdownLabel, { color: colors.text }]}
+          placeholderStyle={[styles.placeholder, { color: colors.textSecondary }]}
+          setItems={setBeneficiariesData}
+          maxHeight={200}
+        />
+      )}
     </View>
   );
 };
@@ -158,13 +131,18 @@ const styles = StyleSheet.create({
     marginTop: 1,
   },
   input: {
-    height: 50,
-    borderColor: "#ccc",
-    borderWidth: 0,
-    borderRadius: 5,
-    marginBottom: 10,
-    fontSize: 25,
-    fontWeight: "700",
+    fontSize: 20,
+    fontFamily: 'Inter-Bold',
+    paddingVertical: 10,
+  },
+  countryCode: {
+    fontSize: 20,
+    fontFamily: 'Inter-Bold',
+  },
+  divider: {
+    height: 1,
+    marginHorizontal: 20,
+    marginTop: -15,
   },
   dropdown: {
     height: 20,
@@ -172,12 +150,26 @@ const styles = StyleSheet.create({
     borderRadius: 0,
     paddingHorizontal: 8,
     bottom: 10,
-    color: "blue",
+    top: 0
   },
-  placeholderStyle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: "#ff6454"
+  dropdownContainer: {
+    borderWidth: 1,
+    borderRadius: 12,
+    top: 50,
+    zIndex: 100000,
+  },
+  dropdownText: {
+    fontSize: 14,
+    fontFamily: 'Inter-Regular',
+    paddingHorizontal: 10,
+  },
+  dropdownLabel: {
+    fontSize: 14,
+    fontFamily: 'Inter-Medium',
+  },
+  placeholder: {
+    fontSize: 14,
+    fontFamily: 'Inter-Medium',
   },
 });
 
