@@ -31,14 +31,14 @@ export const removeToken = async () => {
 };
 
 export const textFormatter = (
-  text: string,
+  text: string | undefined | null,
   withThousand?: boolean,
   withFixedDemcimal?: boolean
 ) => {
-  if (!text) return "";
+  const safeText = String(text || "");
 
   if (withThousand) {
-    return numericFormatter(text.replace(/[^.\d]/g, ""), {
+    return numericFormatter(safeText.replace(/[^.\d]/g, ""), {
       decimalSeparator: ".",
       decimalScale: 2,
       thousandSeparator: ",",
@@ -49,7 +49,7 @@ export const textFormatter = (
     });
   }
 
-  return numericFormatter(text.replace(/[^.\d]/g, ""), {
+  return numericFormatter(safeText.replace(/[^.\d]/g, ""), {
     decimalSeparator: ".",
     decimalScale: 2,
     thousandSeparator: false,

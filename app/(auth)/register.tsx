@@ -98,7 +98,6 @@ export default function Register() {
     setCurrentStep('password');
   };
 
-  console.log(signUpData);
 
   const handleSignUp = async () => {
     if (!signUpData.password || !signUpData.pin) {

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, Pressable } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, Pressable, Dimensions, ScrollView } from 'react-native';
 import { useTheme } from '@/hooks/useTheme';
 import { X } from 'lucide-react-native';
 import Animated, { 
@@ -10,19 +10,21 @@ import Animated, {
 } from 'react-native-reanimated';
 import { BlurView } from 'expo-blur';
 
+const { width, height: mainHeight } = Dimensions.get('window');
 
-interface BottomSheetModalProps {
+interface CustomModalProps {
   visible: boolean;
   onClose: () => void;
   children: React.ReactNode;
   title?: string;
-  height?: number; 
+  height?: number;
   showCloseIcon?: boolean;
   showHandle?: boolean;
   enableBackdropClose?: boolean;
+  scrollable?: boolean;
 }
 
-const BottomSheetModal = ({
+const CustomModal = ({
   visible,
   onClose,
   children,
@@ -31,13 +33,36 @@ const BottomSheetModal = ({
   showCloseIcon = true,
   showHandle = true,
   enableBackdropClose = true,
-}: BottomSheetModalProps) => {
+  scrollable = false,
+}: CustomModalProps) => {
   const { colors, isDark } = useTheme();
 
-  // Calculate modal height
-  const modalHeight = height <= 1 ? height * height : Math.min(height, height * 0.9);
+  const modalHeight = height <= 1 ? height * mainHeight : Math.min(mainHeight, mainHeight * 0.9);
 
   if (!visible) return null;
+
+  const renderContent = () => {
+    const content = (
+      <View style={styles.content}>
+        {children}
+      </View>
+    );
+
+    if (scrollable) {
+      return (
+        <ScrollView 
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollViewContent}
+          showsVerticalScrollIndicator={false}
+          bounces={false}
+        >
+          {content}
+        </ScrollView>
+      );
+    }
+
+    return content;
+  };
 
   return (
     <Modal
@@ -104,9 +129,7 @@ const BottomSheetModal = ({
             </View>
           )}
 
-          <View style={styles.content}>
-            {children}
-          </View>
+          {renderContent()}
         </Animated.View>
       </View>
     </Modal>
@@ -165,6 +188,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 20,
   },
+  scrollView: {
+    flex: 1,
+  },
+  scrollViewContent: {
+    flexGrow: 1,
+  },
 });
 
-export default BottomSheetModal;
+export default CustomModal;

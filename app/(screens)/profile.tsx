@@ -21,18 +21,17 @@ const tabs = [
 
 export default function ProfileScreen() {
   const { colors, isDark } = useTheme();
-  const { user } = useAuth();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState('events');
   const [refreshing, setRefreshing] = useState(false);
   const [showImageModal, setShowImageModal] = useState(false);
   const [imageKey, setImageKey] = useState(Date.now());
   const [isUploading, setIsUploading] = useState(false);
-  const [showWalletTooltip, setShowWalletTooltip] = useState(false);
   
   const { data: profileData, isLoading, refetch, error } = useGetProfileQuery({});
   const [uploadProfilePicture] = useUploadProfilePictureMutation();
-  const { data: followingsData, isLoading: isLoadingFollowings } = useGetFollowingsQuery();
+  const { data: followingsData, error: isErr } = useGetFollowingsQuery({});
+
 
   const handleImageUpdate = async (type: 'camera' | 'library') => {
     try {
@@ -79,7 +78,6 @@ export default function ProfileScreen() {
         Alert.alert('Success', 'Profile picture updated successfully');
       }
     } catch (err) {
-      console.log(err);
       Alert.alert('Error', 'Failed to update profile picture');
     } finally {
       setIsUploading(false);
@@ -87,7 +85,6 @@ export default function ProfileScreen() {
     }
   };
 
-  console.log(profileData?.data.following)
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -222,30 +219,35 @@ export default function ProfileScreen() {
           <FlatList
             data={followingsData?.data || []}
             renderItem={({ item, index }) => (
-              <Animated.View 
-                entering={FadeInDown.delay(100 * index).springify()}
-                style={[styles.userItem, { borderBottomColor: colors.border }]}
+              <TouchableOpacity
+                onPress={() => router.push({ pathname: '/(screens)/userProfile', params: { userId: item.userId } })}
+                activeOpacity={0.8}
               >
-                <Image 
-                  source={{ 
-                    uri: item.photo_url || 'https://ui-avatars.com/api/?background=random&color=fff&name=' + encodeURIComponent(item.firstName + ' ' + item.lastName)
-                  }} 
-                  style={styles.userAvatar} 
-                />
-                <View style={styles.userInfo}>
-                  <Text style={[styles.userName, { color: colors.text }]}>
-                    {item.firstName} {item.lastName}
-                  </Text>
-                  <Text style={[styles.userUsername, { color: colors.textSecondary }]}>
-                    @{item.userName}
-                  </Text>
-                </View>
-                <TouchableOpacity 
-                  style={[styles.followButton, { backgroundColor: colors.primary }]}
+                <Animated.View 
+                  entering={FadeInDown.delay(100 * index).springify()}
+                  style={[styles.userItem, { borderBottomColor: colors.border }]}
                 >
-                  <Text style={styles.followButtonText}>Following</Text>
-                </TouchableOpacity>
-              </Animated.View>
+                  <Image 
+                    source={{ 
+                      uri: item.photo_url || 'https://ui-avatars.com/api/?background=random&color=fff&name=' + encodeURIComponent(item.firstName + ' ' + item.lastName)
+                    }} 
+                    style={styles.userAvatar} 
+                  />
+                  <View style={styles.userInfo}>
+                    <Text style={[styles.userName, { color: colors.text }]}> 
+                      {item.firstName} {item.lastName}
+                    </Text>
+                    <Text style={[styles.userUsername, { color: colors.textSecondary }]}> 
+                      @{item.userName}
+                    </Text>
+                  </View>
+                  <TouchableOpacity 
+                    style={[styles.followButton, { backgroundColor: colors.primary }]}
+                  >
+                    <Text style={styles.followButtonText}>Following</Text>
+                  </TouchableOpacity>
+                </Animated.View>
+              </TouchableOpacity>
             )}
             keyExtractor={(item) => item.userId}
             contentContainerStyle={styles.contentList}
@@ -259,7 +261,7 @@ export default function ProfileScreen() {
             }
             ListEmptyComponent={
               <View style={styles.emptyContainer}>
-                <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+                <Text style={[styles.emptyText, { color: colors.textSecondary }]}> 
                   You are not following anyone yet.
                 </Text>
                 <TouchableOpacity 
@@ -278,9 +280,7 @@ export default function ProfileScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      <StatusBar style={isDark ? 'light' : 'dark'} />
-      
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>      
       <View style={styles.header}>
         <TouchableOpacity 
           style={[styles.backButton, { backgroundColor: colors.card }]}

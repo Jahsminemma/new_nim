@@ -7,10 +7,8 @@ import {
   ScrollView,
   FlatList,
   RefreshControl,
-  Platform,
   View,
   Text,
-  Dimensions,
   NativeSyntheticEvent,
   NativeScrollEvent
 } from "react-native";
@@ -30,16 +28,10 @@ import { useHandleMutationError } from "@/hooks/useError";
 import { IOrderDetailItem, OrderRequest } from "../types";
 import CustomTextInput from "@/components/ui/CustomTextInput";
 import CustomModal from "@/components/ui/CustomModal";
-import ScreenHeaderLayout from "@/components/ui/ScreenHeaderLayout";
+import ScreenHeaderLayout from "@/components/layout/ScreenHeaderLayout";
 import PaymentModal from "@/components/ui/PaymentModal";
 import { PageLoadingModal } from "@/components/ui/PageLoadingModal";
-import Animated, { FadeIn, FadeOut, SlideInRight } from "react-native-reanimated";
-import { BlurView } from "expo-blur";
-
-// Add type declaration for lodash
-declare module 'lodash';
-
-const { width } = Dimensions.get("window");
+import Animated, { FadeIn, SlideInRight } from "react-native-reanimated";
 
 interface Country {
   isoName: string;
@@ -77,14 +69,9 @@ interface GiftCardProduct {
   senderFee?: number;
 }
 
-type ColorScheme = "light" | "dark";
-
 export default function GiftCardScreen() {
   const router = useRouter();
-  const [selectedCard, setSelectedCard] = useState<GiftCardProduct | null>(
-    null
-  );
-
+  const [selectedCard, setSelectedCard] = useState<GiftCardProduct | null>(null);
   const [selectedAmount, setSelectedAmount] = useState<number | null>(null);
   const [recipientEmail, setRecipientEmail] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
@@ -129,7 +116,6 @@ export default function GiftCardScreen() {
   );
 
   const [refreshing, setRefreshing] = useState(true);
-
   const { data: countriesData } = useGetCountriesQuery({});
 
   // Set initial country to United States
@@ -155,16 +141,6 @@ export default function GiftCardScreen() {
     fetchGiftCards();
   };
 
-  const handleLoadMore = () => {
-    if (!giftCardRecord.end && !giftCardRecord.isLoading && !isLoadingMore) {
-      setIsLoadingMore(true);
-      setGiftCardRecord((prev) => ({
-        ...prev,
-        page: prev.page + 1,
-      }));
-    }
-  };
-
   const fetchGiftCards = async () => {
     setGiftCardRecord((prev) => ({
       ...prev,
@@ -177,9 +153,6 @@ export default function GiftCardScreen() {
         size: PAGE_SIZE,
         countryCode: selectedCountry?.isoName,
       }).unwrap();
-
-      console.log(giftCards.content.length);
-      
 
       const giftCardsData = giftCards.content;
       if (giftCardsData) {
@@ -266,7 +239,7 @@ export default function GiftCardScreen() {
 
   const totalAmount = +amount + Number(nairaFee);
 
-  const [placeOrder, { isLoading }] = usePlaceOrderMutation();
+  const [placeOrder] = usePlaceOrderMutation();
 
   const handleGiftCardPayment = async () => {
     try {
@@ -299,6 +272,7 @@ export default function GiftCardScreen() {
       value: `₦${textFormatter(String(totalAmount.toFixed(2)), true)}`,
     },
   ];
+
   const groupedGiftCards = React.useMemo(() => {
     if (!giftCardRecord.data.length) return {};
 
@@ -339,21 +313,20 @@ export default function GiftCardScreen() {
   }, []);
 
   const handleCardSelect = React.useCallback((card: GiftCardProduct, category: string) => {
-    if (!showModal && !selectedCategory && !showOrderDetails) {
-      setSelectedCard({
-        ...card,
-        category: { name: category }
-      });
-      setShowModal(true);
+    setSelectedCard({
+      ...card,
+      category: { name: category }
+    });
+    // Close category modal if open, then open gift card modal
+    if (selectedCategory) {
+      setSelectedCategory(null);
     }
-  }, [showModal, selectedCategory, showOrderDetails]);
+    setShowModal(true);
+  }, [selectedCategory]);
 
   const handleCategorySelect = React.useCallback((category: string) => {
-    if (!selectedCategory && !showModal && !showOrderDetails) {
-      setSelectedCategory(category);
-    }
-  }, [selectedCategory, showModal, showOrderDetails]);
-
+    setSelectedCategory(category);
+  }, []);
 
   const filteredGroupedCards = React.useMemo(() => {
     if (!searchQuery) return groupedGiftCards;
@@ -387,28 +360,40 @@ export default function GiftCardScreen() {
     );
   }, [countriesData, countrySearchQuery]);
 
-  const renderSearchBar = React.useCallback(
-    () => (
-      <View style={{ padding: 14 }}>
-        <CustomTextInput
-          placeholder={selectedCategory ? "Search for a biller" : "Search here"}
-          value={searchQuery}
-          label=""
-          setValue={setSearchQuery}
-          customRightIcon={<Ionicons name="search" size={20} color="#aaa" />}
-          inputType={"default"}
-        />
-      </View>
-    ),
-    [selectedCategory, searchQuery]
-  );
+  const calculateSenderAmount = (recipientAmount: number): number => {
+    if (!selectedCard) return 0;
+
+    if (selectedCard.fixedRecipientToSenderDenominationsMap) {
+      const amount = recipientAmount.toFixed(1);
+      return selectedCard.fixedRecipientToSenderDenominationsMap[amount] || 0;
+    }
+
+    const recipientRange =
+      (selectedCard.maxRecipientDenomination || 0) -
+      (selectedCard.minRecipientDenomination || 0);
+    const senderRange =
+      (selectedCard.maxSenderDenomination || 0) -
+      (selectedCard.minSenderDenomination || 0);
+
+    if (recipientRange === 0 || senderRange === 0) return 0;
+
+    const ratio = senderRange / recipientRange;
+    return round(
+      (recipientAmount - (selectedCard.minRecipientDenomination || 0)) * ratio +
+        (selectedCard.minSenderDenomination || 0)
+    );
+  };
+
+  const handleImageError = () => {
+    console.log("Error loading flag");
+  };
 
   const renderGiftCardModal = React.useCallback(
     () => (
       <CustomModal
         visible={showModal}
         onClose={handleModalClose}
-        height={0.6}
+        height={0.7}
       >
         <View style={styles.modalContent}>
           {selectedCard && (
@@ -453,12 +438,10 @@ export default function GiftCardScreen() {
                         style={[
                           styles.amountButton,
                           {
-                            backgroundColor:
-                              colors.card,
+                            backgroundColor: colors.card,
                           },
                           selectedAmount === amount && {
-                            backgroundColor:
-                              colors.primary,
+                            backgroundColor: colors.primary,
                           },
                         ]}
                         onPress={() => {
@@ -472,6 +455,7 @@ export default function GiftCardScreen() {
                         <Text
                           style={[
                             styles.amountText,
+                            { color: colors.text },
                             selectedAmount === amount && { color: "#fff" },
                           ]}
                         >
@@ -480,6 +464,7 @@ export default function GiftCardScreen() {
                         <Text
                           style={[
                             styles.senderAmount,
+                            { color: colors.textSecondary },
                             selectedAmount === amount && { color: "#fff" },
                           ]}
                         >
@@ -497,6 +482,7 @@ export default function GiftCardScreen() {
                     value={selectedAmount?.toString() || ""}
                     keyboardType="numeric"
                     placeholderTextColor="#666"
+                    color={colors.primary}
                     label={""}
                     inputType={"default"}
                     setValue={(text) => {
@@ -521,7 +507,7 @@ export default function GiftCardScreen() {
                     }}
                   />
                   {selectedAmount && (
-                    <Text style={styles.senderAmount}>
+                    <Text style={[styles.senderAmount, { color: colors.textSecondary }]}>
                       {calculateSenderAmount(selectedAmount) + (selectedCard.senderFee || 1700)}{" "}
                       {selectedCard.senderCurrencyCode}
                     </Text>
@@ -542,11 +528,12 @@ export default function GiftCardScreen() {
               <TouchableOpacity
                 style={[
                   styles.purchaseButton,
+                  { backgroundColor: colors.primary },
                   (!selectedAmount || !recipientEmail) && styles.disabledButton,
                 ]}
                 onPress={() => {
                   setShowModal(false);
-                  setShowOrderDetails(true);
+                  setTimeout(() => setShowOrderDetails(true), 100)
                 }}
                 disabled={!selectedAmount || !recipientEmail}
               >
@@ -559,79 +546,25 @@ export default function GiftCardScreen() {
         </View>
       </CustomModal>
     ),
-    [showModal, selectedCard, selectedAmount, recipientEmail, handleModalClose]
-  );
-
-  const handleImageError = () => {
-    console.log("Error loading flag");
-  };
-  const calculateSenderAmount = (recipientAmount: number): number => {
-    if (!selectedCard) return 0;
-
-    if (selectedCard.fixedRecipientToSenderDenominationsMap) {
-      const amount = recipientAmount.toFixed(1);
-      return selectedCard.fixedRecipientToSenderDenominationsMap[amount] || 0;
-    }
-
-    const recipientRange =
-      (selectedCard.maxRecipientDenomination || 0) -
-      (selectedCard.minRecipientDenomination || 0);
-    const senderRange =
-      (selectedCard.maxSenderDenomination || 0) -
-      (selectedCard.minSenderDenomination || 0);
-
-    if (recipientRange === 0 || senderRange === 0) return 0;
-
-    const ratio = senderRange / recipientRange;
-    return round(
-      (recipientAmount - (selectedCard.minRecipientDenomination || 0)) * ratio +
-        (selectedCard.minSenderDenomination || 0)
-    );
-  };
-
-  const renderCountrySelector = () => (
-    <TouchableOpacity
-      style={styles.currencySelector}
-      onPress={() => setShowCountryModal(true)}
-    >
-      {selectedCountry ? (
-        <>
-          <SvgUri
-            uri={selectedCountry.flagUrl}
-            width={24}
-            height={24}
-            style={styles.countryFlag}
-            onError={handleImageError}
-            preserveAspectRatio="xMidYMid meet"
-          />
-          <Text style={styles.currencyText}>
-            {selectedCountry.isoName}
-          </Text>
-          <Ionicons name="chevron-down" size={20} color="#aaa" />
-        </>
-      ) : (
-        <Text style={styles.currencyText}>Select Country</Text>
-      )}
-    </TouchableOpacity>
+    [showModal, selectedCard, selectedAmount, recipientEmail, handleModalClose, colors]
   );
 
   const renderCountryModal = () => (
     <CustomModal
       visible={showCountryModal}
+      title="Select Country"
       onClose={handleCountryModalClose}
       height={0.8}
     >
       <View style={styles.modalContent}>
-        <Text style={styles.modalTitle}>Select Country</Text>
         <CustomTextInput
           placeholder="Search by name, code, or currency"
           value={countrySearchQuery}
-          onChangeText={setCountrySearchQuery}
           placeholderTextColor="#777"
           label={""}
           inputType={"default"}
           setValue={setCountrySearchQuery}
-          customRightIcon={<Ionicons name="search" size={20} color="#666" />}
+          customRightIcon={<Ionicons name="search\" size={20} color="#666" />}
         />
         <FlatList
           data={filteredCountries || []}
@@ -640,8 +573,10 @@ export default function GiftCardScreen() {
             <TouchableOpacity
               style={[
                 styles.countryItem,
-                selectedCountry?.isoName === item.isoName &&
-                  styles.selectedCountry,
+                { borderBottomColor: colors.border },
+                selectedCountry?.isoName === item.isoName && {
+                  backgroundColor: colors.card,
+                },
               ]}
               onPress={() => {
                 setSelectedCountry(item);
@@ -658,11 +593,11 @@ export default function GiftCardScreen() {
                 preserveAspectRatio="xMidYMid meet"
               />
               <View style={styles.countryInfo}>
-                <Text style={styles.countryName}>{item.name}</Text>
-                <Text style={styles.currencyName}>{item.currencyName}</Text>
+                <Text style={[styles.countryName, { color: colors.text }]}>{item.name}</Text>
+                <Text style={[styles.currencyName, { color: colors.textSecondary }]}>{item.currencyName}</Text>
               </View>
               {selectedCountry?.isoName === item.isoName && (
-                <Ionicons name="checkmark" size={24} color="#007AFF" />
+                <Ionicons name="checkmark" size={24} color={colors.primary} />
               )}
             </TouchableOpacity>
           )}
@@ -672,33 +607,29 @@ export default function GiftCardScreen() {
     </CustomModal>
   );
 
-  const renderHeader = () => (
-    <View style={styles.header}>
-      <TouchableOpacity style={styles.backButton}></TouchableOpacity>
-      <Text style={styles.headerTitle}>
-        {selectedCategory ? selectedCategory : "Gift Cards"}
-      </Text>
-      {renderCountrySelector()}
-    </View>
-  );
-
   const renderMainView = () => (
-    <ScreenHeaderLayout>
-      <View style={styles.header}>
+    <ScreenHeaderLayout headerTitle="Gift Cards">
+      <View style={[styles.header, { backgroundColor: colors.background }]}>
+        <Text style={styles.headerTitle}></Text>
         <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Gift Cards</Text>
-        <TouchableOpacity
-          style={styles.currencySelector}
+          style={[styles.currencySelector, { backgroundColor: colors.card }]}
           onPress={() => setShowCountryModal(true)}
         >
-          <Text style={styles.currencyText} numberOfLines={1}>
-            {selectedCountry?.currency?.code || "Select"}
-          </Text>
+          {selectedCountry && (
+            <>
+              <SvgUri
+                uri={selectedCountry.flagUrl}
+                width={24}
+                height={24}
+                style={styles.countryFlag}
+                onError={handleImageError}
+                preserveAspectRatio="xMidYMid meet"
+              />
+              <Text style={[styles.currencyText, { color: colors.text }]} numberOfLines={1}>
+                {selectedCountry.isoName}
+              </Text>
+            </>
+          )}
           <Ionicons name="chevron-down" size={20} color={colors.text} />
         </TouchableOpacity>
       </View>
@@ -712,33 +643,26 @@ export default function GiftCardScreen() {
             colors={[colors.primary]}
           />
         }
-        onScroll={(event: NativeSyntheticEvent<NativeScrollEvent>) => {
-          const offsetY = event.nativeEvent.contentOffset.y;
-          const height = event.nativeEvent.contentSize.height;
-          const distanceFromEnd = height - offsetY;
-          const threshold = height * 0.9;
-          if (distanceFromEnd < threshold && !isLoadingMore) {
-            handleLoadMore();
-          }
-        }}
       >
-        <View style={styles.searchContainer}>
+        <View style={[styles.searchContainer, { backgroundColor: colors.card }]}>
           <CustomTextInput
             placeholder="Search gift cards"
             value={searchQuery}
-            onChangeText={setSearchQuery}
-            leftIcon={<Ionicons name="search" size={20} color={colors.textSecondary} />}
+            setValue={setSearchQuery}
+            label=""
+            inputType="default"
+            customRightIcon={<Ionicons name="search\" size={20} color={colors.textSecondary} />}
           />
         </View>
 
-        {loading ? (
+        {isDebouncing ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={colors.primary} />
-            <Text style={styles.loadingText}>Loading gift cards...</Text>
+            <Text style={[styles.loadingText, { color: colors.text }]}>Loading gift cards...</Text>
           </View>
         ) : giftCardError ? (
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>
+            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
               {giftCardError?.data?.message || "Failed to load gift cards"}
             </Text>
           </View>
@@ -754,11 +678,11 @@ export default function GiftCardScreen() {
                   style={styles.categorySection}
                 >
                   <View style={styles.categoryHeader}>
-                    <Text style={styles.categoryTitle}>{category}</Text>
+                    <Text style={[styles.categoryTitle, { color: colors.text }]}>{category}</Text>
                     <TouchableOpacity
                       onPress={() => handleCategorySelect(category)}
                     >
-                      <Text style={styles.viewAllText}>View All</Text>
+                      <Text style={[styles.viewAllText, { color: colors.primary }]}>View All</Text>
                     </TouchableOpacity>
                   </View>
                   <ScrollView
@@ -768,8 +692,9 @@ export default function GiftCardScreen() {
                   >
                     {cards.map((card, index) => (
                       <Animated.View
+                        key={card.productId}
                         entering={FadeIn.delay(index * 100)}
-                        style={styles.cardItem}
+                        style={[styles.cardItem, { backgroundColor: colors.card }]}
                       >
                         <TouchableOpacity
                           onPress={() => handleCardSelect(card, category)}
@@ -780,7 +705,7 @@ export default function GiftCardScreen() {
                             style={styles.cardLogo}
                             resizeMode="contain"
                           />
-                          <Text style={styles.cardName}>
+                          <Text style={[styles.cardName, { color: colors.text }]}>
                             {card.country.isoName} {card.brand.brandName}
                           </Text>
                         </TouchableOpacity>
@@ -790,17 +715,6 @@ export default function GiftCardScreen() {
                 </Animated.View>
               );
             }}
-            ListFooterComponent={() =>
-              isLoadingMore ? (
-                <View style={styles.loadingMoreContainer}>
-                  <ActivityIndicator
-                    size="small"
-                    color={colors.primary}
-                  />
-                  <Text style={styles.loadingMoreText}>Loading more...</Text>
-                </View>
-              ) : null
-            }
           />
         )}
       </ScrollView>
@@ -808,30 +722,35 @@ export default function GiftCardScreen() {
   );
 
   const renderCategoryDetail = React.useCallback(() => {
-    const categoryCards = filteredGroupedCards[selectedCategory!] || [];
+    if (!selectedCategory) return null;
+    
+    const categoryCards = filteredGroupedCards[selectedCategory] || [];
 
     return (
       <CustomModal
         visible={!!selectedCategory}
         onClose={handleCategoryModalClose}
-        addHeight={0.8}
+        height={0.9}
       >
         <View style={styles.modalContent}>
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>{selectedCategory}</Text>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>{selectedCategory}</Text>
           </View>
-          {renderSearchBar()}
-          {isLoadingGiftCards && currentPage === 0 ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator
-                size="large"
-                color={colors.primary}
-              />
-              <Text style={styles.loadingText}>Loading gift cards...</Text>
-            </View>
-          ) : categoryCards.length === 0 ? (
+          
+          <View style={{ padding: 14 }}>
+            <CustomTextInput
+              placeholder="Search for a biller"
+              value={searchQuery}
+              label=""
+              setValue={setSearchQuery}
+              customRightIcon={<Ionicons name="search\" size={20} color="#aaa" />}
+              inputType={"default"}
+            />
+          </View>
+
+          {categoryCards.length === 0 ? (
             <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>
+              <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
                 {searchQuery
                   ? "No gift cards found matching your search"
                   : `No gift cards available in ${selectedCategory}`}
@@ -843,12 +762,9 @@ export default function GiftCardScreen() {
               keyExtractor={(item) => item.productId.toString()}
               renderItem={({ item }) => (
                 <TouchableOpacity
-                  style={styles.listItem}
+                  style={[styles.listItem, { borderBottomColor: colors.border }]}
                   onPress={() => {
-                    if (!showModal) {
-                      setSelectedCard(item);
-                      setShowModal(true);
-                    }
+                    handleCardSelect(item, selectedCategory);
                   }}
                 >
                   <Image
@@ -856,30 +772,18 @@ export default function GiftCardScreen() {
                     style={styles.listItemLogo}
                     resizeMode="contain"
                   />
-                  <Text style={styles.listItemName}>
+                  <Text style={[styles.listItemName, { color: colors.text }]}>
                     {item.country.isoName} {item.brand.brandName}
                   </Text>
                 </TouchableOpacity>
               )}
               contentContainerStyle={styles.listContainer}
-              onEndReachedThreshold={0.5}
-              ListFooterComponent={() =>
-                isLoadingMore ? (
-                  <View style={styles.loadingMoreContainer}>
-                    <ActivityIndicator
-                      size="small"
-                      color={colors.primary}
-                    />
-                    <Text style={styles.loadingMoreText}>Loading more...</Text>
-                  </View>
-                ) : null
-              }
             />
           )}
         </View>
       </CustomModal>
     );
-  }, [selectedCategory]);
+  }, [selectedCategory, filteredGroupedCards, searchQuery, colors]);
 
   const styles = StyleSheet.create({
     container: {
@@ -894,15 +798,6 @@ export default function GiftCardScreen() {
       marginTop: -20,
       width: '100%',
       paddingBottom: 10,
-      backgroundColor: colors.background,
-    },
-    backButton: {
-      width: 40,
-      height: 40,
-      justifyContent: 'center',
-      alignItems: 'center',
-      backgroundColor: colors.card,
-      borderRadius: 20,
     },
     headerTitle: {
       fontSize: 24,
@@ -910,7 +805,6 @@ export default function GiftCardScreen() {
       flex: 1,
       textAlign: 'center',
       marginHorizontal: 8,
-      color: colors.text,
     },
     currencySelector: {
       flexDirection: "row",
@@ -918,7 +812,6 @@ export default function GiftCardScreen() {
       padding: 8,
       paddingHorizontal: 12,
       borderRadius: 20,
-      backgroundColor: colors.card,
       minWidth: 100,
       maxWidth: 120,
       shadowColor: "#000",
@@ -935,11 +828,9 @@ export default function GiftCardScreen() {
       fontFamily: 'Inter-Medium',
       marginRight: 4,
       flexShrink: 1,
-      color: colors.text,
     },
     searchContainer: {
       margin: 16,
-      backgroundColor: colors.card,
       borderRadius: 12,
       shadowColor: "#000",
       shadowOffset: {
@@ -963,12 +854,10 @@ export default function GiftCardScreen() {
     categoryTitle: {
       fontSize: 20,
       fontFamily: 'Inter-Bold',
-      color: colors.text,
     },
     viewAllText: {
       fontSize: 14,
       fontFamily: 'Inter-Medium',
-      color: colors.primary,
     },
     cardsRow: {
       paddingLeft: 16,
@@ -976,7 +865,6 @@ export default function GiftCardScreen() {
     cardItem: {
       marginRight: 16,
       width: 160,
-      backgroundColor: colors.card,
       borderRadius: 12,
       padding: 12,
       shadowColor: "#000",
@@ -997,15 +885,12 @@ export default function GiftCardScreen() {
     cardName: {
       fontSize: 14,
       fontFamily: 'Inter-Medium',
-      color: colors.text,
       textAlign: "left",
     },
     modalContent: {
       padding: 16,
     },
     modalHeader: {
-      flexDirection: "row",
-      justifyContent: "space-between",
       alignItems: "center",
       marginBottom: 24,
     },
@@ -1019,18 +904,15 @@ export default function GiftCardScreen() {
       fontSize: 24,
       fontFamily: 'Inter-Bold',
       marginBottom: 4,
-      color: colors.text,
     },
     modalSubtitle: {
       fontSize: 16,
       fontFamily: 'Inter-Regular',
-      color: colors.textSecondary,
     },
     sectionTitle: {
       fontSize: 18,
       fontFamily: 'Inter-Bold',
       marginBottom: 16,
-      color: colors.text,
     },
     amountContainer: {
       marginBottom: 24,
@@ -1040,7 +922,6 @@ export default function GiftCardScreen() {
       borderRadius: 12,
       marginRight: 12,
       minWidth: 120,
-      backgroundColor: colors.card,
       shadowColor: "#000",
       shadowOffset: {
         width: 0,
@@ -1054,20 +935,17 @@ export default function GiftCardScreen() {
       fontSize: 18,
       fontFamily: 'Inter-Bold',
       marginBottom: 4,
-      color: colors.text,
     },
     senderAmount: {
       fontSize: 14,
       fontFamily: 'Inter-Regular',
-      color: colors.textSecondary,
     },
     purchaseButton: {
       padding: 16,
       borderRadius: 12,
       alignItems: "center",
       marginTop: 24,
-      backgroundColor: colors.primary,
-      shadowColor: colors.primary,
+      shadowColor: "#000",
       shadowOffset: {
         width: 0,
         height: 4,
@@ -1088,12 +966,12 @@ export default function GiftCardScreen() {
       flex: 1,
       justifyContent: "center",
       alignItems: "center",
+      paddingVertical: 50,
     },
     loadingText: {
       marginTop: 16,
       fontSize: 16,
       fontFamily: 'Inter-Medium',
-      color: colors.text,
     },
     emptyContainer: {
       flex: 1,
@@ -1105,7 +983,6 @@ export default function GiftCardScreen() {
       fontSize: 16,
       fontFamily: 'Inter-Medium',
       textAlign: "center",
-      color: colors.textSecondary,
     },
     countryItem: {
       flexDirection: "row",
@@ -1113,10 +990,6 @@ export default function GiftCardScreen() {
       paddingVertical: 16,
       paddingHorizontal: 12,
       borderBottomWidth: 1,
-      borderBottomColor: colors.border,
-    },
-    selectedCountry: {
-      backgroundColor: colors.card,
     },
     countryInfo: {
       flex: 1,
@@ -1126,31 +999,16 @@ export default function GiftCardScreen() {
       fontSize: 16,
       fontFamily: 'Inter-Bold',
       marginBottom: 4,
-      color: colors.text,
     },
     currencyName: {
       fontSize: 14,
       fontFamily: 'Inter-Regular',
-      color: colors.textSecondary,
     },
     countryList: {
       paddingBottom: 16,
     },
-    loadingMoreContainer: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "center",
-      paddingVertical: 16,
-    },
-    loadingMoreText: {
-      marginLeft: 8,
-      fontSize: 14,
-      fontFamily: 'Inter-Medium',
-      color: colors.textSecondary,
-    },
     customAmountContainer: {
       marginBottom: 24,
-      backgroundColor: colors.card,
       borderRadius: 12,
       padding: 16,
       shadowColor: "#000",
@@ -1189,24 +1047,24 @@ export default function GiftCardScreen() {
     },
   });
 
-  if (isLoadingGiftCards) {
+  if (isLoadingGiftCards && giftCardRecord.data.length === 0) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator
-          size="large"
-          color={colors.primary}
-        />
-        <Text style={styles.loadingText}>Loading gift cards...</Text>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={[styles.loadingText, { color: colors.text }]}>Loading gift cards...</Text>
       </View>
     );
   }
 
-  if (giftCardError) {
+  if (giftCardError && giftCardRecord.data.length === 0) {
     return (
-      <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>Failed to load gift cards</Text>
-        <TouchableOpacity style={styles.retryButton} onPress={() => {}}>
-          <Text style={styles.retryButtonText}>Retry</Text>
+      <View style={styles.emptyContainer}>
+        <Text style={[styles.emptyText, { color: colors.textSecondary }]}>Failed to load gift cards</Text>
+        <TouchableOpacity 
+          style={[styles.purchaseButton, { backgroundColor: colors.primary, marginTop: 16 }]} 
+          onPress={handleRefresh}
+        >
+          <Text style={styles.purchaseButtonText}>Retry</Text>
         </TouchableOpacity>
       </View>
     );
@@ -1216,7 +1074,7 @@ export default function GiftCardScreen() {
     <>
       {showOrderDetails && (
         <PaymentModal
-          visible={showOrderDetails}
+          visible={true}
           onClose={() => setShowOrderDetails(false)}
           onClickPay={handleGiftCardPayment}
           orderItemDetails={orderDetailLists}

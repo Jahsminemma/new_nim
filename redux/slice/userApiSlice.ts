@@ -5,11 +5,19 @@ const USER_URL = "user";
 
 const userApiSlice = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
-    getAllUsers: builder.mutation({
-      query: (userRequest) => ({
-        url: `${USER_URL}/all?page=${userRequest.page}&size=${userRequest.size}`,
-        method: "GET",
-      }),
+    getAllUsers: builder.query({
+      query: (userRequest: { page: number; size: number; search?: string }) => {        
+        let url = `${USER_URL}/all?page=${userRequest.page}&size=${userRequest.size}`;
+        if (userRequest.search) {
+          url += `&search=${userRequest.search}`;
+        }
+        console.log(url);
+        
+        return {
+          url,
+          method: "GET",
+        };
+      },
     }),
     getProfile: builder.query({
       query: () => ({
@@ -170,7 +178,7 @@ const userApiSlice = apiSlice.injectEndpoints({
 });
 
 export const {
-  useGetAllUsersMutation,
+  useGetAllUsersQuery,
   useFollowUserMutation,
   useGetProfileQuery,
   useUnFollowUserMutation,

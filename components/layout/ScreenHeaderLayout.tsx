@@ -8,9 +8,17 @@ import {
   View,
   Text,
   StyleSheet,
+  StatusBar,
+  Platform,
 } from 'react-native';
 
-const ScreenHeaderLayout = ({headerTitle, children}: {headerTitle: string, children: ReactNode}) => {
+const ScreenHeaderLayout = ({
+  headerTitle,
+  children,
+}: {
+  headerTitle: string;
+  children: ReactNode;
+}) => {
   const { colors } = useTheme();
   return (
     <SafeAreaView
@@ -28,7 +36,9 @@ const ScreenHeaderLayout = ({headerTitle, children}: {headerTitle: string, child
         </Text>
         <View style={styles.placeholder} />
       </View>
-      {children}
+      <View style={styles.content}>
+        {children}
+      </View>
     </SafeAreaView>
   );
 };
@@ -61,6 +71,10 @@ let styles = StyleSheet.create({
   },
   scrollContainer: {
     flex: 1,
+  },
+  content: {
+    flex: 1,
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
   },
 });
 

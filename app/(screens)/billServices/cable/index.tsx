@@ -28,7 +28,7 @@ import { IOrderDetailItem } from '../types';
 import PaymentModal from '@/components/ui/PaymentModal';
 import { useTheme } from '@/hooks/useTheme';
 import { ArrowLeft, CheckCircle2 } from 'lucide-react-native';
-import ScreenHeaderLayout from '@/components/ui/ScreenHeaderLayout';
+import ScreenHeaderLayout from '@/components/layout/ScreenHeaderLayout';
 
 interface IPriceTag {
   variation_amount: string;

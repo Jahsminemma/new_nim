@@ -31,7 +31,7 @@ import CustomTextInput from '@/components/ui/CustomTextInput';
 import { PageLoadingModal } from '@/components/ui/PageLoadingModal';
 import PaymentModal from '@/components/ui/PaymentModal';
 import { useTheme } from '@/hooks/useTheme';
-import ScreenHeaderLayout from '@/components/ui/ScreenHeaderLayout';
+import ScreenHeaderLayout from '@/components/layout/ScreenHeaderLayout';
 
 interface IPriceTag {
   price: string;
@@ -167,8 +167,6 @@ const Index = () => {
       }
     }
   }, [number]);
-
-  console.log(orderDetailLists);
 
   return (
     <ScreenHeaderLayout headerTitle="Airtime Top up">

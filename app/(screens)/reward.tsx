@@ -78,11 +78,6 @@ const Reward = () => {
       icon: <Zap color={colors.primary} size={24} />,
       link: "/(screens)/billServices/electricity" as Href<string>,
     },
-    {
-      name: "Gift Card",
-      icon: <Gift color={colors.primary} size={24} />,
-      link: "/(screens)/billServices/giftCard" as Href<string>,
-    },
   ];
 
   return (

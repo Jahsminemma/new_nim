@@ -6,7 +6,6 @@ import { useDispatch } from 'react-redux';
 import { useLoginMutation } from '../redux/slice/authApiSlice';
 import {
   LoginStatus,
-  setAuthStatusAsync,
   setCredentials,
   setCredentialsAsync,
   setLoginStatus,
@@ -32,7 +31,6 @@ interface AuthContextType {
   isLoading: boolean;
   loginStatus: LoginStatus;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string, name: string, accountType: 'individual' | 'brand') => Promise<void>;
   signOut: () => void;
   completeOnboarding: () => Promise<void>;
 }
@@ -43,7 +41,6 @@ export const AuthContext = createContext<AuthContextType>({
   isLoading: true,
   loginStatus: LoginStatus.INACTIVE,
   signIn: async () => {},
-  signUp: async () => {},
   signOut: () => {},
   completeOnboarding: async () => {},
 });
@@ -101,7 +98,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
         setUser(userWithoutTokens);
         setLoginStatusState(LoginStatus.ACTIVE);
         dispatch(setLoginStatus(LoginStatus.ACTIVE));
-        dispatch(setAuthStatusAsync({ status: true }));
         dispatch(setCredentials(userWithoutTokens));
         dispatch(
           setCredentialsAsync({
@@ -121,28 +117,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
       } else {
         Alert.alert('Error', err?.data?.message || 'Something went wrong');
       }
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const signUp = async (email: string, password: string, name: string, accountType: 'individual' | 'brand') => {
-    // Implement sign up logic here
-    setIsLoading(true);
-    try {
-      // Add your sign up API call here
-      const userData: User = {
-        id: '1',
-        email,
-        name,
-        accountType,
-      };
-      
-      setUser(userData);
-      await AsyncStorage.setItem('userData', JSON.stringify(userData));
-    } catch (error) {
-      console.error('Error signing up:', error);
-      throw error;
     } finally {
       setIsLoading(false);
     }
@@ -176,7 +150,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
       isLoading,
       loginStatus,
       signIn,
-      signUp,
       signOut,
       completeOnboarding,
     }}>

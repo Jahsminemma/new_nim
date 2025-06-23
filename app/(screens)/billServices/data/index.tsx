@@ -23,7 +23,7 @@ import ServiceProvider from "@/components/ui/ServiceProvider";
 import { PageLoadingModal } from "@/components/ui/PageLoadingModal";
 import PaymentModal from "@/components/ui/PaymentModal";
 import { Colors } from "react-native/Libraries/NewAppScreen";
-import ScreenHeaderLayout from "@/components/ui/ScreenHeaderLayout";
+import ScreenHeaderLayout from "@/components/layout/ScreenHeaderLayout";
 import { useTheme } from "@/hooks/useTheme";
 
 interface IPriceTag {

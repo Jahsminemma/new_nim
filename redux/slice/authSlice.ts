@@ -62,6 +62,7 @@ export const authSlice = createSlice({
             state.user = action.payload;
         },
         setLoginStatus: (state, action: PayloadAction<LoginStatus>) => {
+            setAuthStatusAsync({status: true})
             state.loginStatus = action.payload;
         },
         setLoading: (state, action: PayloadAction<boolean>) => {

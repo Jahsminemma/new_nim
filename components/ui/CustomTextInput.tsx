@@ -82,7 +82,7 @@ const CustomTextInput = ({
                   {
                     height: multiline ? 130 : undefined,
                     width: '80%',
-                    color
+                    color: colors.text
                   },
                 ]}
                 defaultValue={value}

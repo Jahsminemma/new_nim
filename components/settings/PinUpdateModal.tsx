@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal } from 'react-native';
 import { useTheme } from '@/hooks/useTheme';
 import { X } from 'lucide-react-native';
+import ScreenHeaderLayout from '../layout/ScreenHeaderLayout';
 
 interface PinUpdateModalProps {
   visible: boolean;
@@ -113,6 +114,7 @@ export default function PinUpdateModal({ visible, onClose }: PinUpdateModalProps
       animationType="slide"
       transparent={true}
     >
+      <ScreenHeaderLayout>
       <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
         <View style={styles.header}>
           <TouchableOpacity 
@@ -142,6 +144,7 @@ export default function PinUpdateModal({ visible, onClose }: PinUpdateModalProps
         {renderPinDots()}
         {renderKeypad()}
       </View>
+      </ScreenHeaderLayout>
     </Modal>
   );
 }

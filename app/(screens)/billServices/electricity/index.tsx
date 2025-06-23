@@ -23,7 +23,7 @@ import { router } from 'expo-router';
 import { IOrderDetailItem, OrderRequest } from '../types';
 import { calculateTransactionFee, textFormatter } from '@/utils';
 import { useHandleMutationError } from '@/hooks/useError';
-import ScreenHeaderLayout from '@/components/ui/ScreenHeaderLayout';
+import ScreenHeaderLayout from '@/components/layout/ScreenHeaderLayout';
 import { PageLoadingModal } from '@/components/ui/PageLoadingModal';
 import CustomTextInput from '@/components/ui/CustomTextInput';
 import BeneficiaryInput from '@/components/ui/ECServiceBeneficiaryInput';
